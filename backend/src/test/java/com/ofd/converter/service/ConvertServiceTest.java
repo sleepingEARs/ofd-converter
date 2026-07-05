@@ -27,9 +27,10 @@ class ConvertServiceTest {
         ValidationService validation = new ValidationService();
         TaskService taskSvc = mock(TaskService.class);
         LogService logSvc = mock(LogService.class);
+        UploadRateLimiter rateLimiter = new UploadRateLimiter();
         ConvertPipeline pipeline = new ConvertPipeline(List.of());
         var exec = Executors.newFixedThreadPool(2);
-        ConvertService svc = new ConvertService(fs, validation, taskSvc, pipeline, logSvc, exec, p, 5);
+        ConvertService svc = new ConvertService(fs, validation, taskSvc, pipeline, logSvc, exec, p, 5, rateLimiter);
 
         byte[] ofdBytes = Files.readAllBytes(Fixtures.ofd(tmp));
         MockMultipartFile mp = new MockMultipartFile("file", "sample.ofd",

@@ -11,6 +11,7 @@ public enum ErrorCode {
     TASK_FAILED(HttpStatus.CONFLICT),
     TASK_TIMEOUT(HttpStatus.REQUEST_TIMEOUT),
     STORAGE_FULL(HttpStatus.SERVICE_UNAVAILABLE),
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
     public final HttpStatus status;

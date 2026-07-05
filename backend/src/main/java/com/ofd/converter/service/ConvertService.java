@@ -37,12 +37,14 @@ public class ConvertService {
     private final ExecutorService executor;
     private final RetentionProperties props;
     private final int timeoutMinutes;
+    private final UploadRateLimiter rateLimiter;
 
     public ConvertService(FileService fileService, ValidationService validation,
                           TaskService taskService, ConvertPipeline pipeline, LogService logService,
                           @Qualifier("conversionExecutor") ExecutorService executor,
                           RetentionProperties props,
-                          @Value("${conversion.timeout-minutes:5}") int timeoutMinutes) {
+                          @Value("${conversion.timeout-minutes:5}") int timeoutMinutes,
+                          UploadRateLimiter rateLimiter) {
         this.fileService = fileService;
         this.validation = validation;
         this.taskService = taskService;
@@ -51,9 +53,11 @@ public class ConvertService {
         this.executor = executor;
         this.props = props;
         this.timeoutMinutes = timeoutMinutes;
+        this.rateLimiter = rateLimiter;
     }
 
     public UploadResponse upload(MultipartFile file, String ip, String ua) {
+        rateLimiter.check(ip);
         validation.validateSize(file.getSize());
         if (!fileService.diskOk()) {
             throw new ApiException(ErrorCode.STORAGE_FULL, "磁盘空间不足", 503);
