@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  forward-headers-strategy: native
+spring:
+  application:
+    name: ofd-converter
+  datasource:
+    url: jdbc:sqlite:${OFD_DB_PATH:/data/converter.db}?journal_mode=WAL
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+file:
+  retention-hours: ${FILE_RETENTION_HOURS:24}
+  data-dir: ${OFD_DATA_DIR:/data}
+log:
+  retention-days: ${LOG_RETENTION_DAYS:90}
+conversion:
+  max-parallel: 4
+  timeout-minutes: 5
