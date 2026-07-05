@@ -1,5 +1,6 @@
 package com.ofd.converter.config;
 
+import com.ofd.converter.model.OperationLog;
 import com.ofd.converter.model.Task;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,14 @@ public class JdbcConfig extends AbstractJdbcConfiguration {
         return task -> {
             task.markNotNew();
             return task;
+        };
+    }
+
+    @Bean
+    AfterConvertCallback<OperationLog> operationLogAfterConvertCallback() {
+        return log -> {
+            log.markNotNew();
+            return log;
         };
     }
 }

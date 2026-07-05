@@ -16,3 +16,18 @@ CREATE TABLE IF NOT EXISTS task (
   updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_task_created ON task(created_at);
+
+CREATE TABLE IF NOT EXISTS operation_log (
+  id TEXT PRIMARY KEY,
+  operation_type TEXT NOT NULL,
+  client_ip TEXT,
+  file_id TEXT,
+  task_id TEXT,
+  target_format TEXT,
+  status TEXT NOT NULL,
+  duration_ms INTEGER,
+  error_message TEXT,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_log_created ON operation_log(created_at);
