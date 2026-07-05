@@ -34,6 +34,17 @@ public class FileService {
         return dir;
     }
 
+    /** Returns the single uploaded file for a given file_id (each upload gets its own dir). */
+    public Path uploadFile(String fileId) {
+        Path dir = dataDir.resolve("uploads/" + fileId);
+        try (Stream<Path> s = Files.list(dir)) {
+            return s.filter(Files::isRegularFile).findFirst()
+                .orElseThrow(() -> new java.nio.file.NoSuchFileException("upload not found: " + fileId));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     public Path zipDir(Path dir, String zipName) throws IOException {
         Path zip = dir.resolve(zipName);
         try (ZipArchiveOutputStream zos = new ZipArchiveOutputStream(zip.toFile());
