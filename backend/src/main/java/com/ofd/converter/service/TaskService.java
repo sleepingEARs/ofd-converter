@@ -62,6 +62,13 @@ public class TaskService {
         repo.save(t);
     }
 
+    public void saveDownloadedAt(String taskId, long ts) {
+        Task t = get(taskId);
+        t.setDownloadedAt(ts);
+        t.setUpdatedAt(System.currentTimeMillis());
+        repo.save(t);
+    }
+
     private void updateStatus(String taskId, TaskStatus s) {
         Task t = get(taskId);
         t.setStatus(s.name());
