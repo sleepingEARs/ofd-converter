@@ -1,0 +1,16 @@
+# Maven / Java build output
+backend/target/
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.eclipse/
+
+# OS
+.DS_Store
+
+# SDD scratch (self-ignoring already, but be explicit)
+.superpowers/sdd/
