@@ -63,7 +63,7 @@ public class ConvertController {
     public TaskResponse task(@PathVariable String taskId) {
         Task t = taskService.get(taskId);
         String url = TaskStatus.DONE.name().equals(t.getStatus()) ? "/api/download/" + t.getId() : null;
-        return new TaskResponse(t.getId(), t.getStatus(), url, t.getErrorMessage());
+        return new TaskResponse(t.getId(), t.getStatus().toLowerCase(), url, t.getErrorMessage());
     }
 
     @GetMapping("/api/download/{taskId}")

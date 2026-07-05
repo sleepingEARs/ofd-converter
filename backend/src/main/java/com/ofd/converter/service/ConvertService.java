@@ -111,7 +111,7 @@ public class ConvertService {
                 // success / failure handled inside runConversion
             });
 
-        return new ConvertResponse(t.getId(), t.getStatus());
+        return new ConvertResponse(t.getId(), t.getStatus().toLowerCase());
     }
 
     private void runConversion(Task t, SourceType src, ConvertFormat fmt, Map<String, Object> options) {

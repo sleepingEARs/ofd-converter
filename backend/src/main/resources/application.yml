@@ -5,12 +5,14 @@ spring:
   application:
     name: ofd-converter
   datasource:
-    url: jdbc:sqlite:${OFD_DB_PATH:/data/converter.db}?journal_mode=WAL
+    url: "jdbc:sqlite:${OFD_DB_PATH:/data/converter.db}?journal_mode=WAL"
     driver-class-name: org.sqlite.JDBC
   sql:
     init:
       mode: always
       schema-locations: classpath:schema.sql
+  jackson:
+    property-naming-strategy: SNAKE_CASE
   servlet:
     multipart:
       max-file-size: 50MB
