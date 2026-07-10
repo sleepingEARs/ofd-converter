@@ -28,6 +28,7 @@ public class Task implements Persistable<String> {
     private Long downloadedAt;
     private Long createdAt;
     private Long updatedAt;
+    private String warning;
 
     // Spring Data JDBC uses isNew() to decide INSERT vs UPDATE. Since we assign IDs
     // ourselves (UUID), the default (not-new if @Id set) would always UPDATE and fail.

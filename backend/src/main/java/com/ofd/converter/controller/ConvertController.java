@@ -46,9 +46,8 @@ public class ConvertController {
 
     @GetMapping("/api/formats")
     public Map<String, List<String>> formats() {
-        // Only conversions with registered converters (Plan 1 scope). DOCX/MD are Plan 2.
         Map<String, List<String>> m = new LinkedHashMap<>();
-        m.put("ofd", List.of("pdf", "png", "jpg", "txt"));
+        m.put("ofd", List.of("pdf", "png", "jpg", "txt", "docx", "md"));
         m.put("pdf", List.of("ofd"));
         m.put("image", List.of("ofd"));
         return m;
@@ -68,7 +67,7 @@ public class ConvertController {
     public TaskResponse task(@PathVariable String taskId) {
         Task t = taskService.get(taskId);
         String url = TaskStatus.DONE.name().equals(t.getStatus()) ? "/api/download/" + t.getId() : null;
-        return new TaskResponse(t.getId(), t.getStatus().toLowerCase(), url, t.getErrorMessage());
+        return new TaskResponse(t.getId(), t.getStatus().toLowerCase(), url, t.getErrorMessage(), t.getWarning());
     }
 
     @GetMapping("/api/download/{taskId}")

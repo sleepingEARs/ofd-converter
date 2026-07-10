@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS task (
   error_message TEXT,
   downloaded_at INTEGER,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  warning TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_task_created ON task(created_at);
 

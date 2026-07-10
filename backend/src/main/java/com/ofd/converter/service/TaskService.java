@@ -15,7 +15,7 @@ public class TaskService {
         this.repo = repo;
     }
 
-    public Task create(String fileId, String filename, SourceType src, ConvertFormat fmt, String optionsJson) {
+    public Task create(String fileId, String filename, SourceType src, ConvertFormat fmt, String optionsJson, String warning) {
         Task t = new Task();
         t.setId(UUID.randomUUID().toString());
         t.setSourceFileId(fileId);
@@ -24,6 +24,7 @@ public class TaskService {
         t.setTargetFormat(fmt.name());
         t.setStatus(TaskStatus.PENDING.name());
         t.setOptionsJson(optionsJson);
+        t.setWarning(warning);
         long now = System.currentTimeMillis();
         t.setCreatedAt(now);
         t.setUpdatedAt(now);

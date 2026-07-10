@@ -100,7 +100,7 @@ public class ConvertService {
         }
 
         Task t = taskService.create(req.fileId(), filename, src, fmt,
-            req.options() == null ? null : req.options().toString());
+            req.options() == null ? null : req.options().toString(), warningFor(fmt));
         logService.record(OperationType.CONVERT, ip, req.fileId(), t.getId(), fmt.name(), "PENDING", 0, null, ua);
 
         // Run async with a per-task timeout. convert() returns immediately.
@@ -175,5 +175,14 @@ public class ConvertService {
             // whenComplete safety net won't double-mark because status is now FAILED.
             if (e instanceof Error) throw (Error) e;
         }
+    }
+
+    /** Lossy-conversion warning text, or null for lossless conversions. */
+    private static String warningFor(ConvertFormat fmt) {
+        return switch (fmt) {
+            case DOCX -> "版式转 DOCX 为有损转换，排版可能变化，仅供参考";
+            case MD -> "OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考";
+            default -> null;
+        };
     }
 }

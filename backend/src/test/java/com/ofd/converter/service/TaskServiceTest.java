@@ -18,7 +18,7 @@ class TaskServiceTest {
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
         TaskService svc = new TaskService(repo);
 
-        Task t = svc.create("f1", "a.ofd", SourceType.OFD, ConvertFormat.PDF, null);
+        Task t = svc.create("f1", "a.ofd", SourceType.OFD, ConvertFormat.PDF, null, null);
 
         assertEquals(TaskStatus.PENDING.name(), t.getStatus());
         verify(repo).save(any());
