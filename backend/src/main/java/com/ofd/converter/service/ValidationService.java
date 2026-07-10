@@ -5,9 +5,13 @@ import com.ofd.converter.model.ErrorCode;
 import com.ofd.converter.model.SourceType;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 public class ValidationService {
     private static final long MAX_BYTES = 50L * 1024 * 1024;
+    private static final Pattern UUID_PATTERN =
+        Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
     public SourceType detect(byte[] head, String filename) {
         if (head == null || head.length < 4) throw fail();
@@ -30,6 +34,13 @@ public class ValidationService {
         String base = normalized.substring(normalized.lastIndexOf('/') + 1);
         base = base.replaceAll("[\\\\/]", "").replaceAll("\\p{Cntrl}", "").trim();
         return base.isBlank() ? "file" : base;
+    }
+
+    /** Validates a file_id is a UUID, preventing path traversal (e.g. "../../etc"). */
+    public void requireFileId(String fileId) {
+        if (fileId == null || !UUID_PATTERN.matcher(fileId).matches()) {
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "无效的文件 ID", 400);
+        }
     }
 
     private ApiException fail() {

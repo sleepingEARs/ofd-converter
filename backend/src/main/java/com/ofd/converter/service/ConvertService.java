@@ -82,6 +82,7 @@ public class ConvertService {
     }
 
     public ConvertResponse convert(ConvertRequest req, String ip, String ua) {
+        validation.requireFileId(req.fileId());
         Path source = fileService.uploadFile(req.fileId());
         String filename = source.getFileName().toString();
         byte[] head;
@@ -103,16 +104,37 @@ public class ConvertService {
         logService.record(OperationType.CONVERT, ip, req.fileId(), t.getId(), fmt.name(), "PENDING", 0, null, ua);
 
         // Run async with a per-task timeout. convert() returns immediately.
+        // NOTE: ofdrw converters are not interruptible; orTimeout marks the task TIMEOUT but
+        // the conversion thread continues until ofdrw completes or throws. A hung conversion
+        // occupies a pool slot. Process-level isolation is a future enhancement.
+        String fileId = req.fileId();
         CompletableFuture
             .runAsync(() -> runConversion(t, src, fmt, req.options()), executor)
             .orTimeout(timeoutMinutes, TimeUnit.MINUTES)
             .whenComplete((result, ex) -> {
                 if (ex instanceof TimeoutException) {
                     taskService.markTimeout(t.getId());
-                    logService.record(OperationType.CONVERT, null, req.fileId(), t.getId(),
+                    logService.record(OperationType.CONVERT, null, fileId, t.getId(),
                         fmt.name(), "TIMEOUT", timeoutMinutes * 60_000L, "转换超时", null);
+                } else if (ex != null) {
+                    // Safety net: runConversion usually marks failed itself, but if the cause
+                    // escaped before that (e.g. an Error from markProcessing), mark failed here.
+                    // Guard against clobbering a terminal status already set.
+                    try {
+                        Task current = taskService.get(t.getId());
+                        String s = current.getStatus();
+                        if (!TaskStatus.TIMEOUT.name().equals(s)
+                            && !TaskStatus.FAILED.name().equals(s)
+                            && !TaskStatus.DONE.name().equals(s)) {
+                            String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                            taskService.markFailed(t.getId(), msg);
+                            logService.record(OperationType.CONVERT, null, fileId, t.getId(),
+                                fmt.name(), "FAILED", 0, msg, null);
+                        }
+                    } catch (Exception ignored) {
+                    }
                 }
-                // success / failure handled inside runConversion
+                // success handled inside runConversion
             });
 
         return new ConvertResponse(t.getId(), t.getStatus().toLowerCase());
@@ -134,18 +156,24 @@ public class ConvertService {
             taskService.markDone(t.getId(), r.outputFile().toString(), r.outputFilename(), r.size(), r.outputType());
             logService.record(OperationType.CONVERT, null, t.getSourceFileId(), t.getId(),
                 fmt.name(), "SUCCESS", System.currentTimeMillis() - start, null, null);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             Task current = taskService.get(t.getId());
             if (TaskStatus.TIMEOUT.name().equals(current.getStatus())) {
+                // Error still needs to propagate so the CompletableFuture completes exceptionally.
+                if (e instanceof Error) throw (Error) e;
                 return;
             }
-            taskService.markFailed(t.getId(), e.getMessage());
+            String message = (e instanceof OutOfMemoryError) ? "内存不足" : e.getMessage();
+            taskService.markFailed(t.getId(), message);
             logService.record(OperationType.CONVERT, null, t.getSourceFileId(), t.getId(),
-                fmt.name(), "FAILED", System.currentTimeMillis() - start, e.getMessage(), null);
+                fmt.name(), "FAILED", System.currentTimeMillis() - start, message, null);
             try {
                 fileService.deleteRecursively(fileService.createOutputDir(t.getId()));
             } catch (Exception ignored) {
             }
+            // Propagate Errors (e.g. OOM) so the future completes exceptionally; the
+            // whenComplete safety net won't double-mark because status is now FAILED.
+            if (e instanceof Error) throw (Error) e;
         }
     }
 }

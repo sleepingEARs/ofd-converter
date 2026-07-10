@@ -1,11 +1,13 @@
 package com.ofd.converter.controller;
 
 import com.ofd.converter.interceptor.ClientIpInterceptor;
+import com.ofd.converter.model.OperationType;
 import com.ofd.converter.model.Task;
 import com.ofd.converter.model.TaskStatus;
 import com.ofd.converter.model.dto.*;
 import com.ofd.converter.service.ConvertService;
 import com.ofd.converter.service.FileService;
+import com.ofd.converter.service.LogService;
 import com.ofd.converter.service.TaskService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.FileSystemResource;
@@ -27,11 +29,14 @@ public class ConvertController {
     private final ConvertService convertService;
     private final TaskService taskService;
     private final FileService fileService;
+    private final LogService logService;
 
-    public ConvertController(ConvertService convertService, TaskService taskService, FileService fileService) {
+    public ConvertController(ConvertService convertService, TaskService taskService,
+                             FileService fileService, LogService logService) {
         this.convertService = convertService;
         this.taskService = taskService;
         this.fileService = fileService;
+        this.logService = logService;
     }
 
     @GetMapping("/health")
@@ -41,11 +46,11 @@ public class ConvertController {
 
     @GetMapping("/api/formats")
     public Map<String, List<String>> formats() {
+        // Only conversions with registered converters (Plan 1 scope). DOCX/MD are Plan 2.
         Map<String, List<String>> m = new LinkedHashMap<>();
-        m.put("ofd", List.of("pdf", "png", "jpg", "docx", "txt", "md"));
-        m.put("pdf", List.of("ofd", "png", "jpg"));
+        m.put("ofd", List.of("pdf", "png", "jpg", "txt"));
+        m.put("pdf", List.of("ofd"));
         m.put("image", List.of("ofd"));
-        m.put("docx", List.of("ofd"));
         return m;
     }
 
@@ -67,7 +72,7 @@ public class ConvertController {
     }
 
     @GetMapping("/api/download/{taskId}")
-    public ResponseEntity<FileSystemResource> download(@PathVariable String taskId) {
+    public ResponseEntity<FileSystemResource> download(@PathVariable String taskId, HttpServletRequest req) {
         Task t = taskService.get(taskId);
         if (!TaskStatus.DONE.name().equals(t.getStatus())) {
             throw new ApiException(com.ofd.converter.model.ErrorCode.FILE_EXPIRED, "文件未就绪或已过期", 410);
@@ -79,6 +84,8 @@ public class ConvertController {
         if (t.getDownloadedAt() == null) {
             taskService.saveDownloadedAt(t.getId(), System.currentTimeMillis());
         }
+        logService.record(OperationType.DOWNLOAD, ClientIpInterceptor.extractIp(req), null,
+            taskId, null, "SUCCESS", 0, null, req.getHeader("User-Agent"));
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + t.getOutputFilename() + "\"")
             .body(new FileSystemResource(file));
