@@ -24,6 +24,31 @@ public final class Fixtures {
         return ofd;
     }
 
+    /** An OFD with three paragraphs at different font sizes (simulates H1/H2/body). */
+    public static Path ofdWithHeadings(Path dir) throws Exception {
+        Path ofd = dir.resolve("headings.ofd");
+        try (OFDDoc doc = new OFDDoc(ofd)) {
+            doc.setDefaultPageLayout(PageLayout.A4());
+            doc.add(new Paragraph("一级标题").setFontSize(5.0));
+            doc.add(new Paragraph("二级标题").setFontSize(3.5));
+            doc.add(new Paragraph("这是正文段落，字号较小。").setFontSize(2.5));
+        }
+        return ofd;
+    }
+
+    /** An OFD with list-like paragraphs (numbered and bulleted). */
+    public static Path ofdWithList(Path dir) throws Exception {
+        Path ofd = dir.resolve("list.ofd");
+        try (OFDDoc doc = new OFDDoc(ofd)) {
+            doc.setDefaultPageLayout(PageLayout.A4());
+            doc.add(new Paragraph("1. 第一项").setFontSize(2.5));
+            doc.add(new Paragraph("2. 第二项").setFontSize(2.5));
+            doc.add(new Paragraph("- 无序项 A").setFontSize(2.5));
+            doc.add(new Paragraph("- 无序项 B").setFontSize(2.5));
+        }
+        return ofd;
+    }
+
     /** A minimal valid PDF written by hand. */
     public static Path pdf(Path dir) throws Exception {
         Path pdf = dir.resolve("sample.pdf");
