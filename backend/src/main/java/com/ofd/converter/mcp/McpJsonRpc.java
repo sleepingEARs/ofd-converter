@@ -11,6 +11,7 @@ public final class McpJsonRpc {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Response(String jsonrpc, Object id, Object result, Error error) {}
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Error(int code, String message, Object data) {}
 
     public record Success(Object result) {}
