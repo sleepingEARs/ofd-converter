@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
-    "antd": "^6.5.0",
+    "antd": "^5.0.0",
     "ofd.js": "^1.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
