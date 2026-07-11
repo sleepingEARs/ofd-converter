@@ -11,8 +11,9 @@ export function useTaskPolling(tasks: TaskItem[], onUpdate: (task: TaskItem) => 
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
 
-  const pendingIds = tasks.filter((t) => !TERMINAL.has(t.status)).map((t) => t.task_id)
-  const pendingKey = pendingIds.join(',')
+  // Dependency key = sorted non-terminal task IDs. Drives effect restart when the
+  // set of in-flight tasks changes; the effect body reads tasksRef.current for fresh data.
+  const pendingKey = tasks.filter((t) => !TERMINAL.has(t.status)).map((t) => t.task_id).join(',')
 
   useEffect(() => {
     if (!pendingKey) return

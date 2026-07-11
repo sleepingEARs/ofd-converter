@@ -13,7 +13,10 @@ export function PreviewPanel({ file }: Props) {
 
   useEffect(() => {
     void preview(file)
-  }, [file, preview])
+    // Depend on file_id (primitive) not the file object reference: App computes
+    // selectedFile via files.find() each render, producing a new reference, which
+    // would otherwise re-trigger ofd.js parsing on every poll-driven re-render.
+  }, [file?.file_id, preview])
 
   useEffect(() => {
     if (containerRef.current) {
