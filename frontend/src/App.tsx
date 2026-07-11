@@ -1,121 +1,63 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback } from 'react'
+import { Layout, Typography } from 'antd'
+import { UploadZone } from './components/UploadZone'
+import { FileList } from './components/FileList'
+import { PreviewPanel } from './components/PreviewPanel'
+import { ConvertOptions } from './components/ConvertOptions'
+import { TaskList } from './components/TaskList'
+import { useConvert } from './hooks/useConvert'
+import { useTaskPolling } from './hooks/useTaskPolling'
+import { api } from './api/client'
+import type { FileItem, TaskItem } from './types/api'
 
-function App() {
-  const [count, setCount] = useState(0)
+const { Header, Content } = Layout
+const { Title } = Typography
+
+export function App() {
+  const [files, setFiles] = useState<FileItem[]>([])
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
+  const [tasks, setTasks] = useState<TaskItem[]>([])
+  const { convert, converting } = useConvert()
+
+  const selectedFile = files.find((f) => f.file_id === selectedFileId) ?? null
+
+  const onUpdateTask = useCallback((t: TaskItem) => {
+    setTasks((prev) => prev.map((x) => (x.task_id === t.task_id ? t : x)))
+  }, [])
+  useTaskPolling(tasks, onUpdateTask)
+
+  const handleUploaded = useCallback((f: FileItem) => {
+    setFiles((prev) => [...prev, f])
+  }, [])
+
+  const handleDelete = useCallback((fileId: string) => {
+    setFiles((prev) => prev.filter((f) => f.file_id !== fileId))
+    setSelectedFileId((prev) => (prev === fileId ? null : prev))
+  }, [])
+
+  const handleConvert = useCallback(async (targetFormat: string) => {
+    if (!selectedFile) return
+    const task = await convert(selectedFile.file_id, selectedFile.filename, targetFormat)
+    if (task) setTasks((prev) => [task, ...prev])
+  }, [selectedFile, convert])
+
+  const handleDownload = useCallback((taskId: string) => {
+    window.location.href = api.downloadUrl(taskId)
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header><Title level={3} style={{ color: 'white', margin: '12px 0' }}>OFD 转换工具</Title></Header>
+      <Content style={{ padding: 24, maxWidth: 1000, margin: '0 auto', width: '100%' }}>
+        <UploadZone onUploaded={handleUploaded} />
+        <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
+          <div style={{ flex: 1 }}><FileList files={files} selectedFileId={selectedFileId} onSelect={setSelectedFileId} onDelete={handleDelete} /></div>
+          <div style={{ flex: 2 }}><PreviewPanel file={selectedFile} /></div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <div style={{ marginTop: 16 }}><ConvertOptions selectedFile={selectedFile} onConvert={handleConvert} converting={converting} /></div>
+        <div style={{ marginTop: 16 }}><TaskList tasks={tasks} onDownload={handleDownload} /></div>
+      </Content>
+    </Layout>
   )
 }
 

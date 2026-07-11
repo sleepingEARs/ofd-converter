@@ -14,3 +14,6 @@ target/
 
 # SDD scratch (self-ignoring already, but be explicit)
 .superpowers/sdd/
+node_modules/
+.vite/
+package-lock.json

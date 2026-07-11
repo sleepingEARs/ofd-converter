@@ -1,36 +1,51 @@
 # OFD Converter
 
-基于 Web 的 OFD（GB/T 33190-2016）文件格式转换工具——后端 MVP。
+基于 Web 的 OFD（GB/T 33190-2016）文件格式转换工具。
 
-## 范围（Plan 1）
+## 范围
 
-- OFD → PDF / PNG / JPG / 文本
-- PDF → OFD、图片 → OFD
+- OFD -> PDF / PNG / JPG / 文本 / DOCX / Markdown
+- PDF / 图片 -> OFD
+- OFD 文件在线预览（ofd.js 纯前端渲染）
 - REST API：上传 / 转换 / 查询 / 下载 / 格式列表 / 健康检查
 - 操作日志（基于 IP）、定时清理、文件保留期可配置、按 IP 限流
-- Docker Compose 部署
+- Docker Compose 一键部署（前后端）
 
-后续计划（独立 plan）：
-- Plan 2：OFD→DOCX、OFD→Markdown、DOCX→OFD 生产转换器（PoC 已完成，见 `docs/superpowers/pocs/2026-07-05-ofd-converter-poc-findings.md`）
-- Plan 3：前端（React + ofd.js 预览）
-- Plan 4：MCP 协议端点
+后续计划：
+- Plan 4：MCP 协议端点（AI Agent 调用）
 
 ## 本地开发
 
+### 后端
+
 ```bash
 cd backend
-mvn test            # 运行所有测试（36 个）
+mvn test            # 运行所有测试
 mvn spring-boot:run # 启动后端（:8080）
 ```
 
-## Docker 部署
+### 前端
+
+```bash
+cd frontend
+npm install
+npm run dev      # Vite dev server（:5173），代理 /api -> localhost:8080
+npm test         # Vitest
+npm run build    # 构建到 dist/
+```
+
+开发时需同时启动后端（`cd backend && mvn spring-boot:run`）。
+
+## Docker 部署（前后端）
 
 ```bash
 docker compose up --build -d
-curl http://localhost:8080/health   # {"status":"ok"}
+curl http://localhost/health          # 经 nginx 代理 -> {"status":"ok"}
+# 前端: http://localhost
+# 后端 API: http://localhost/api/...
 ```
 
-> Docker 构建未在开发环境验证（无 Docker）。首次构建会下载 Maven 依赖，较慢。
+> Docker 构建未在开发环境验证（无 Docker）。首次构建会下载依赖，较慢。
 
 ## 配置（环境变量）
 
@@ -46,18 +61,20 @@ curl http://localhost:8080/health   # {"status":"ok"}
 
 | 端点 | 方法 | 说明 |
 |---|---|---|
-| `/api/upload` | POST (multipart) | 上传文件 → `{file_id, filename, size, source_type}` |
-| `/api/convert` | POST | `{file_id, target_format, options?}` → `{task_id, status}` |
-| `/api/task/{task_id}` | GET | 查询任务状态 → `{task_id, status, download_url?, error?}` |
+| `/api/upload` | POST (multipart) | 上传文件 -> `{file_id, filename, size, source_type}` |
+| `/api/convert` | POST | `{file_id, target_format, options?}` -> `{task_id, status}` |
+| `/api/task/{task_id}` | GET | 查询任务状态 -> `{task_id, status, download_url?, error?, warning?}` |
 | `/api/download/{task_id}` | GET | 下载转换结果（文件流） |
 | `/api/formats` | GET | 按源格式分组的目标格式 |
 | `/health` | GET | `{status: "ok"}`（Docker healthcheck） |
 
-**`target_format` 取值：** `pdf` | `png` | `jpg` | `txt` | `ofd`（`docx`/`md` 见 Plan 2）
+**`target_format` 取值：** `pdf` | `png` | `jpg` | `txt` | `docx` | `md` | `ofd`
 
-反向转换：上传 PDF/图片/DOCX 后，`target_format: "ofd"` 触发 → OFD。
+反向转换：上传 PDF/图片后，`target_format: "ofd"` 触发 -> OFD。
 
 JSON 字段使用 snake_case。状态值小写：`pending` / `processing` / `done` / `failed` / `timeout`。
+
+`warning` 字段：OFD->DOCX/MD 等有损转换返回提示文案，其他转换为 null。
 
 ## 错误响应
 
@@ -77,5 +94,7 @@ JSON 字段使用 snake_case。状态值小写：`pending` / `processing` / `don
 ## 设计文档
 
 - 设计 spec：`docs/superpowers/specs/2026-07-05-ofd-converter-design.md`
+- Plan 2 设计：`docs/superpowers/specs/2026-07-06-ofd-converter-plan-2-design.md`
+- Plan 3 设计：`docs/superpowers/specs/2026-07-06-ofd-converter-plan-3-design.md`
 - PoC 发现：`docs/superpowers/pocs/2026-07-05-ofd-converter-poc-findings.md`
-- 实施计划：`docs/superpowers/plans/2026-07-05-ofd-converter-plan-1.md`
+- 实施计划：`docs/superpowers/plans/`（plan-1/2/3）
