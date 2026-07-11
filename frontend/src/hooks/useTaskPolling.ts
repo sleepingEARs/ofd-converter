@@ -1,0 +1,41 @@
+import { useEffect, useRef } from 'react'
+import { api } from '../api/client'
+import type { TaskItem } from '../types/api'
+
+const POLL_INTERVAL = 2000
+const TERMINAL = new Set(['done', 'failed', 'timeout'])
+
+export function useTaskPolling(tasks: TaskItem[], onUpdate: (task: TaskItem) => void) {
+  const onUpdateRef = useRef(onUpdate)
+  onUpdateRef.current = onUpdate
+  const tasksRef = useRef(tasks)
+  tasksRef.current = tasks
+
+  const pendingIds = tasks.filter((t) => !TERMINAL.has(t.status)).map((t) => t.task_id)
+  const pendingKey = pendingIds.join(',')
+
+  useEffect(() => {
+    if (!pendingKey) return
+    let cancelled = false
+
+    async function tick() {
+      const current = tasksRef.current
+      for (const t of current) {
+        if (cancelled) return
+        if (TERMINAL.has(t.status)) continue
+        try {
+          const r = await api.getTask(t.task_id)
+          if (!cancelled) {
+            onUpdateRef.current({ ...t, status: r.status, download_url: r.download_url, error: r.error, warning: r.warning })
+          }
+        } catch {
+          // swallow; next tick retries
+        }
+      }
+    }
+
+    void tick()
+    const id = setInterval(() => { void tick() }, POLL_INTERVAL)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [pendingKey])
+}
