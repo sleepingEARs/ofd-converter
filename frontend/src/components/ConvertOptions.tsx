@@ -13,9 +13,11 @@ interface Props {
   selectedFile: FileItem | null
   onConvert: (targetFormat: string) => void
   converting: boolean
+  /** Number of files checked for batch convert. */
+  checkedCount: number
 }
 
-export function ConvertOptions({ selectedFile, onConvert, converting }: Props) {
+export function ConvertOptions({ selectedFile, onConvert, converting, checkedCount }: Props) {
   const [formats, setFormats] = useState<FormatsResponse>({})
   const [target, setTarget] = useState<string | null>(null)
 
@@ -24,6 +26,10 @@ export function ConvertOptions({ selectedFile, onConvert, converting }: Props) {
   }, [])
 
   const available = selectedFile ? formats[selectedFile.source_type.toLowerCase()] ?? [] : []
+  const isBatch = checkedCount > 0
+  const buttonLabel = isBatch
+    ? `批量转换 (${checkedCount} 个文件)`
+    : '开始转换'
 
   function startConvert() {
     if (!target) return
@@ -43,8 +49,13 @@ export function ConvertOptions({ selectedFile, onConvert, converting }: Props) {
             {INLINE_WARNING}
           </div>
         )}
-        <Button type="primary" disabled={!target || converting} loading={converting} onClick={startConvert}>
-          开始转换
+        {isBatch && (
+          <div style={{ padding: '4px 12px', background: '#e6f4ff', border: '1px solid #91caff', borderRadius: 4, fontSize: 13 }}>
+            已选 {checkedCount} 个文件，将批量转换并打包为 ZIP 下载。
+          </div>
+        )}
+        <Button type="primary" disabled={!target || converting || (!selectedFile && !isBatch)} loading={converting} onClick={startConvert}>
+          {buttonLabel}
         </Button>
       </Space>
     </Card>
