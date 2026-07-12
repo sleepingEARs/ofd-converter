@@ -9,10 +9,13 @@ const LOSSY = new Set(['docx', 'md', 'txt'])
 
 /** Warning messages for each lossy format. */
 const LOSSY_WARNING: Record<string, string> = {
-  docx: '版式转 DOCX 为有损转换，排版可能变化，仅供参考。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
-  md: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
-  txt: 'OFD 转 TXT 仅提取文本，不含排版和结构。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
+  docx: '版式转 DOCX 为有损转换，排版可能变化，仅供参考。\n\n以下情况转换效果可能不理想：\n• 发票、合同等特殊版式文件\n• 含表格的内容（表格结构可能错乱）\n• 纯图片内容（无法提取文字）\n• 含横向文字、水印等特殊排版\n\n建议转 PDF/PNG 保留原始版式。',
+  md: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考。\n\n以下情况转换效果可能不理想：\n• 发票、合同等特殊版式文件\n• 含表格的内容（表格内容可能混杂）\n• 纯图片内容（无法提取文字）\n• 含横向文字、水印等特殊排版\n\n建议转 PDF/PNG 保留原始版式。',
+  txt: 'OFD 转 TXT 仅提取文本，不含排版和结构。\n\n以下情况转换效果可能不理想：\n• 发票、合同等特殊版式文件\n• 含表格的内容（表格结构会丢失）\n• 纯图片内容（无法提取文字）\n• 含横向文字、水印等特殊排版\n\n建议转 PDF/PNG 保留原始版式。',
 }
+
+/** Inline warning shown when selecting a lossy format. */
+const INLINE_WARNING = '⚠️ 有损转换，以下情况效果可能不理想：发票/合同等特殊版式、表格、纯图片、横向文字/水印。建议转 PDF/PNG 保留原始版式。'
 
 interface Props {
   selectedFile: FileItem | null
@@ -49,8 +52,8 @@ export function ConvertOptions({ selectedFile, onConvert, converting }: Props) {
           </Space>
         </Radio.Group>
         {target && LOSSY.has(target) && (
-          <div style={{ padding: '6px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 13 }}>
-            ⚠️ 该格式为有损转换，发票、合同等特殊格式文件效果可能不理想，建议转 PDF/PNG 保留原始版式。
+          <div style={{ padding: '6px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 13, lineHeight: 1.8 }}>
+            {INLINE_WARNING}
           </div>
         )}
         <Button type="primary" disabled={!target || converting} loading={converting} onClick={startConvert}>
