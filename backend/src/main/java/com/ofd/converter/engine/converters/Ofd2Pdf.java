@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -17,6 +19,16 @@ import java.util.zip.ZipOutputStream;
 @Component
 public class Ofd2Pdf implements Converter {
     private static final Logger log = LoggerFactory.getLogger(Ofd2Pdf.class);
+
+    /** Matches an <Annot> element (with optional namespace prefix) lacking an <Appearance> child. */
+    private static final Pattern ANNOT_NO_APPEARANCE = Pattern.compile(
+        "<(?:\\w+:)?Annot\\b[^>]*>(?:(?!(?:\\w+:)?Appearance).)*?</(?:\\w+:)?Annot>",
+        Pattern.DOTALL
+    );
+    /** Matches a self-closing <Annot .../> (with optional namespace prefix). */
+    private static final Pattern ANNOT_SELF_CLOSING = Pattern.compile(
+        "<(?:\\w+:)?Annot\\b[^>]*/>"
+    );
 
     @Override
     public SourceType source() { return SourceType.OFD; }
@@ -29,18 +41,10 @@ public class Ofd2Pdf implements Converter {
         String base = basename(sourceFilename, ".ofd");
         Path out = outputDir.resolve(base + ".pdf");
 
-        // Attempt 1: direct export.
-        try {
-            try (PDFExporterPDFBox ex = new PDFExporterPDFBox(source, out)) {
-                ex.export();
-            }
-            return new ConvertResult(out, base + ".pdf", Files.size(out), "single");
-        } catch (Exception e) {
-            if (!isAnnotationNPE(e)) throw e;
-            log.warn("OFD->PDF 直接转换遇到注释 NPE (ofdrw bug)，尝试剥离空注释后重试: {}", e.getMessage());
-        }
-
-        // Attempt 2: strip empty-appear
+        // Pre-clean: inject <Appearance/> into Annot elements that lack one, preventing
+        // ofdrw's NPE (Annot.getAppearance() returns null -> getPageBlocks() NPE).
+        // Real-world OFD files (e.g. from suwell renderer) have Watermark/PageNumber
+        // annotations without Appearance, triggering the bug.
         Path cleanedOfd = outputDir.resolve(base + "_clean.ofd");
         try {
             stripEmptyAppearanceAnnotations(source, cleanedOfd);
@@ -48,29 +52,14 @@ public class Ofd2Pdf implements Converter {
                 ex.export();
             }
             return new ConvertResult(out, base + ".pdf", Files.size(out), "single");
-        } catch (Exception retryEx) {
-            log.error("OFD->PDF 剥离注释重试仍失败", retryEx);
-            throw retryEx;
         } finally {
             Files.deleteIfExists(cleanedOfd);
         }
     }
 
-    /** Detect the ofdrw NPE: getAppearance() returns null -> getPageBlocks() NPE. */
-    private static boolean isAnnotationNPE(Throwable e) {
-        Throwable cur = e;
-        for (int i = 0; i < 5 && cur != null; i++) {
-            String msg = cur.getMessage();
-            if (msg != null && msg.contains("getAppearance")) return true;
-            cur = cur.getCause();
-        }
-        return false;
-    }
-
     /**
-     * Strips Annot elements that have no Appearance child (the ones causing the NPE).
-     * OFD is a ZIP of XML files. We re-zip, replacing any Annot element lacking
-     * an Appearance child with a no-op empty Appearance (or remove the Annot entirely).
+     * Re-zips the OFD, injecting a minimal <Appearance/> into every <Annot> element
+     * (with any namespace prefix, e.g. ofd:Annot) that lacks one.
      */
     private static void stripEmptyAppearanceAnnotations(Path source, Path target) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(source));
@@ -80,22 +69,7 @@ public class Ofd2Pdf implements Converter {
                 zos.putNextEntry(new ZipEntry(entry.getName()));
                 if (entry.getName().endsWith(".xml")) {
                     String xml = new String(zis.readAllBytes());
-                    // Inject a minimal <Appearance/> into <Annot> elements that lack one.
-                    // This prevents getAppearance() returning null.
-                    xml = xml.replaceAll(
-                        "(<Annot\\b[^>]*>)(?!\\s*<Appearance)",
-                        "<Annot_BAK>"
-                    );
-                    // Simpler: replace empty Annots (no Appearance) with a complete empty Appearance
-                    xml = xml.replaceAll(
-                        "(<Annot\\b[^>]*>(?:(?!<Appearance).)*?</Annot>)",
-                        "<Annot><Appearance/></Annot>"
-                    );
-                    // Also handle self-closing Annot
-                    xml = xml.replaceAll(
-                        "<Annot\\b[^>]*/>",
-                        "<Annot><Appearance/></Annot>"
-                    );
+                    xml = injectEmptyAppearance(xml);
                     zos.write(xml.getBytes());
                 } else {
                     zis.transferTo(zos);
@@ -103,6 +77,48 @@ public class Ofd2Pdf implements Converter {
                 zos.closeEntry();
             }
         }
+    }
+
+    /**
+     * For every <[prefix:]Annot> element lacking an <[prefix:]Appearance> child, inject
+     * an empty <[prefix:]Appearance/> before the closing tag. Handles namespace prefixes
+     * (ofd:Annot) and self-closing tags.
+     */
+    static String injectEmptyAppearance(String xml) {
+        // Self-closing: <ofd:Annet .../> -> <ofd:Annot><ofd:Appearance/></ofd:Annot>
+        Matcher sc = ANNOT_SELF_CLOSING.matcher(xml);
+        StringBuffer sb = new StringBuffer();
+        while (sc.find()) {
+            String prefix = extractPrefix(sc.group());
+            sc.appendReplacement(sb, Matcher.quoteReplacement(
+                "<" + prefix + "Annot><" + prefix + "Appearance/></" + prefix + "Annot>"));
+        }
+        sc.appendTail(sb);
+        xml = sb.toString();
+
+        // Open-close without Appearance: <ofd:Annot ...>content</ofd:Annot>
+        // Inject <ofd:Appearance/> before </ofd:Annot>
+        Matcher oc = ANNOT_NO_APPEARANCE.matcher(xml);
+        sb = new StringBuffer();
+        while (oc.find()) {
+            String full = oc.group();
+            String prefix = extractPrefix(full);
+            // Insert <prefix:Appearance/> before </prefix:Annot>
+            String closeTag = "</" + prefix + "Annot>";
+            String fixed = full.replace(closeTag, "<" + prefix + "Appearance/>" + closeTag);
+            oc.appendReplacement(sb, Matcher.quoteReplacement(fixed));
+        }
+        oc.appendTail(sb);
+        return sb.toString();
+    }
+
+    /** Extract the namespace prefix from an Annot tag, e.g. "ofd:" from "<ofd:Annot>". */
+    private static String extractPrefix(String tag) {
+        Matcher m = Pattern.compile("<(\\w+:)?Annot").matcher(tag);
+        if (m.find()) {
+            return m.group(1) == null ? "" : m.group(1);
+        }
+        return "";
     }
 
     /** Strips path and the given extension from a filename, returning a safe base name. */
