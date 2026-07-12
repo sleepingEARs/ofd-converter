@@ -31,7 +31,10 @@ export function App() {
   const handleUploaded = useCallback((f: FileItem) => {
     setFiles((prev) => {
       if (prev.length >= MAX_TOTAL_FILES) {
-        message.warning(`最多同时上传 ${MAX_TOTAL_FILES} 个文件`)
+        message.warning({
+          content: `最多同时上传 ${MAX_TOTAL_FILES} 个文件，请先删除部分文件`,
+          duration: 3,
+        })
         return prev
       }
       return [...prev, f]
@@ -43,6 +46,12 @@ export function App() {
     setSelectedFileId((prev) => (prev === fileId ? null : prev))
     setCheckedIds((prev) => { const n = new Set(prev); n.delete(fileId); return n })
   }, [])
+
+  const handleBatchDelete = useCallback(() => {
+    setFiles((prev) => prev.filter((f) => !checkedIds.has(f.file_id)))
+    setSelectedFileId((prev) => (prev && checkedIds.has(prev) ? null : prev))
+    setCheckedIds(new Set())
+  }, [checkedIds])
 
   const handleToggleCheck = useCallback((fileId: string) => {
     setCheckedIds((prev) => {
@@ -194,6 +203,7 @@ export function App() {
               onToggleCheck={handleToggleCheck}
               onToggleAll={handleToggleAll}
               allChecked={allChecked}
+              onBatchDelete={handleBatchDelete}
             />
           </div>
           <div style={{ flex: 2 }}><PreviewPanel file={selectedFile} /></div>

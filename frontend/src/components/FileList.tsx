@@ -1,4 +1,4 @@
-import { List, Tag, Button, Checkbox } from 'antd'
+import { List, Tag, Button, Checkbox, Space } from 'antd'
 import type { FileItem } from '../types/api'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onToggleCheck: (fileId: string) => void
   onToggleAll: () => void
   allChecked: boolean
+  onBatchDelete: () => void
 }
 
 const typeColor: Record<string, string> = { OFD: 'blue', PDF: 'red', IMAGE: 'green', DOCX: 'orange' }
@@ -18,7 +19,7 @@ function formatSize(bytes: number): string {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`
 }
 
-export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds, onToggleCheck, onToggleAll, allChecked }: Props) {
+export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds, onToggleCheck, onToggleAll, allChecked, onBatchDelete }: Props) {
   return (
     <List
       bordered
@@ -27,7 +28,14 @@ export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds
       style={{ maxHeight: 500, overflow: 'auto' }}
       header={
         files.length > 0 ? (
-          <Checkbox checked={allChecked} onChange={onToggleAll}>全选</Checkbox>
+          <Space>
+            <Checkbox checked={allChecked} onChange={onToggleAll}>全选</Checkbox>
+            {checkedIds.size > 0 && (
+              <Button type="link" danger size="small" onClick={onBatchDelete}>
+                删除选中 ({checkedIds.size})
+              </Button>
+            )}
+          </Space>
         ) : undefined
       }
       renderItem={(f) => (
