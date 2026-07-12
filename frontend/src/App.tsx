@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Layout, Typography, message } from 'antd'
+import JSZip from 'jszip'
 import { UploadZone } from './components/UploadZone'
 import { FileList } from './components/FileList'
 import { PreviewPanel } from './components/PreviewPanel'
@@ -54,15 +55,15 @@ export function App() {
 
   const allChecked = files.length > 0 && checkedIds.size === files.length
 
-  // Single-file convert (no checkboxes checked).
   const handleConvert = useCallback(async (targetFormat: string) => {
     if (checkedIds.size > 0) {
-      // Batch convert: convert each checked file, then zip results.
+      // --- Batch convert ---
       const checkedFiles = files.filter((f) => checkedIds.has(f.file_id))
       if (checkedFiles.length === 0) return
 
       message.loading({ content: `正在批量转换 ${checkedFiles.length} 个文件...`, key: 'batch', duration: 0 })
 
+      // Convert each file, collect task IDs.
       const taskIds: string[] = []
       for (const f of checkedFiles) {
         const task = await convert(f.file_id, f.filename, targetFormat)
@@ -72,67 +73,59 @@ export function App() {
         }
       }
 
-      // Wait for all tasks to complete, then download as zip.
-      // Poll each task until done/failed, then fetch results and zip.
-      const maxWait = 300 // max poll iterations (300 * 2s = 10 min)
-      let waited = 0
-      const checkAllDone = async () => {
-        while (waited < maxWait) {
-          waited++
-          const statuses = await Promise.all(taskIds.map(async (tid) => {
-            try {
-              const res = await fetch(`/api/task/${tid}`)
-              const d = await res.json()
-              return d.status
-            } catch { return 'pending' }
-          }))
-          const allDone = statuses.every((s) => s === 'done' || s === 'failed' || s === 'timeout')
-          if (allDone) break
-          await new Promise((r) => setTimeout(r, 2000))
-        }
-
-        // Collect all completed results and download as zip.
-        const blobs: { name: string; blob: Blob }[] = []
-        for (const tid of taskIds) {
+      // Poll until all tasks are terminal (done/failed/timeout).
+      const maxWait = 300
+      for (let i = 0; i < maxWait; i++) {
+        const statuses = await Promise.all(taskIds.map(async (tid) => {
           try {
-            const res = await fetch(api.downloadUrl(tid))
-            if (!res.ok) continue
-            const blob = await res.blob()
-            const cd = res.headers.get('Content-Disposition') || ''
-            const m = cd.match(/filename\*=UTF-8''([^;]+)/) || cd.match(/filename="?([^";]+)"?/)
-            const name = m ? decodeURIComponent(m[1]) : `${tid}`
-            blobs.push({ name, blob })
-          } catch { /* skip failed */ }
-        }
-
-        if (blobs.length === 0) {
-          message.error({ content: '批量转换失败，无可用文件', key: 'batch' })
-          return
-        }
-
-        // Create zip in browser using a simple approach (JSZip not available, use blob concat fallback).
-        // Download each file individually if zip not possible.
-        for (const { name, blob } of blobs) {
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = name
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-        }
-
-        message.success({ content: `批量转换完成，已下载 ${blobs.length} 个文件`, key: 'batch' })
-        // Clear checkboxes after batch.
-        setCheckedIds(new Set())
+            const res = await fetch(`/api/task/${tid}`)
+            const d = await res.json()
+            return d.status as string
+          } catch { return 'pending' }
+        }))
+        if (statuses.every((s) => s === 'done' || s === 'failed' || s === 'timeout')) break
+        await new Promise((r) => setTimeout(r, 2000))
       }
 
-      checkAllDone()
+      // Download each result and zip.
+      const zip = new JSZip()
+      let successCount = 0
+      for (const tid of taskIds) {
+        try {
+          const res = await fetch(api.downloadUrl(tid))
+          if (!res.ok) continue
+          const blob = await res.blob()
+          const cd = res.headers.get('Content-Disposition') || ''
+          const m = cd.match(/filename\*=UTF-8''([^;]+)/) || cd.match(/filename="?([^";]+)"?/)
+          const name = m ? decodeURIComponent(m[1]) : `${tid}`
+          zip.file(name, blob)
+          successCount++
+        } catch { /* skip failed */ }
+      }
+
+      if (successCount === 0) {
+        message.error({ content: '批量转换失败，无可用文件', key: 'batch' })
+        return
+      }
+
+      // Generate and download the zip.
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const zipName = `batch_${targetFormat}_${new Date().toISOString().slice(0, 10)}.zip`
+      const url = URL.createObjectURL(zipBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = zipName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      message.success({ content: `批量转换完成，已下载 ${successCount} 个文件（${zipName}）`, key: 'batch' })
+      setCheckedIds(new Set())
       return
     }
 
-    // Single file convert (existing behavior).
+    // --- Single file convert ---
     if (!selectedFile) return
     const task = await convert(selectedFile.file_id, selectedFile.filename, targetFormat)
     if (task) setTasks((prev) => [task, ...prev])
