@@ -2,7 +2,6 @@ package com.ofd.converter;
 
 import org.junit.jupiter.api.Test;
 import org.ofdrw.reader.OFDReader;
-import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SmokeTest {

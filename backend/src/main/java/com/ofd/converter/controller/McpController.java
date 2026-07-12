@@ -43,6 +43,8 @@ public class McpController {
         try {
             request = om.readValue(raw, McpJsonRpc.Request.class);
         } catch (Exception e) {
+            // HTTP 200 + JSON-RPC error envelope (not 4xx): MCP clients read the
+            // envelope, not the HTTP status. Consistent with all other error paths.
             return json(new McpJsonRpc.Response("2.0", null, null,
                 new McpJsonRpc.Error(McpErrors.PARSE_ERROR, "解析错误", null)), 200);
         }

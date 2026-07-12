@@ -10,6 +10,10 @@ interface Props {
 
 const typeColor: Record<string, string> = { OFD: 'blue', PDF: 'red', IMAGE: 'green', DOCX: 'orange' }
 
+function formatSize(bytes: number): string {
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`
+}
+
 export function FileList({ files, selectedFileId, onSelect, onDelete }: Props) {
   return (
     <List
@@ -26,7 +30,7 @@ export function FileList({ files, selectedFileId, onSelect, onDelete }: Props) {
         >
           <List.Item.Meta
             title={f.filename}
-            description={<><Tag color={typeColor[f.source_type] ?? 'default'}>{f.source_type}</Tag>{(f.size / 1024).toFixed(1)} KB</>}
+            description={<><Tag color={typeColor[f.source_type] ?? 'default'}>{f.source_type}</Tag>{formatSize(f.size)}</>}
           />
         </List.Item>
       )}

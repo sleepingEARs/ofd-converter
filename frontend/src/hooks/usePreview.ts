@@ -13,11 +13,6 @@ export function usePreview() {
   const [pages, setPages] = useState<HTMLElement[]>([])
   const [currentPage, setCurrentPage] = useState(0)
 
-  const clear = useCallback(() => {
-    setPages([])
-    setCurrentPage(0)
-  }, [])
-
   const preview = useCallback(async (file: FileItem | null) => {
     setPages([])
     setCurrentPage(0)
@@ -49,5 +44,5 @@ export function usePreview() {
     }
   }, [])
 
-  return { preview, loading, pages, currentPage, setCurrentPage, clear }
+  return { preview, loading, pages, currentPage, setCurrentPage }
 }

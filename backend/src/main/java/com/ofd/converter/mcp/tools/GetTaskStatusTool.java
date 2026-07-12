@@ -3,6 +3,7 @@ package com.ofd.converter.mcp.tools;
 import com.ofd.converter.mcp.McpSession;
 import com.ofd.converter.mcp.McpTool;
 import com.ofd.converter.model.Task;
+import com.ofd.converter.model.TaskStatus;
 import com.ofd.converter.service.TaskService;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +40,7 @@ public class GetTaskStatusTool implements McpTool {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("task_id", t.getId());
         result.put("status", t.getStatus().toLowerCase());
-        result.put("download_url", t.getStatus().equals("DONE") ? "/api/download/" + t.getId() : null);
+        result.put("download_url", TaskStatus.DONE.name().equals(t.getStatus()) ? "/api/download/" + t.getId() : null);
         result.put("error", t.getErrorMessage());
         result.put("warning", t.getWarning());
         return result;

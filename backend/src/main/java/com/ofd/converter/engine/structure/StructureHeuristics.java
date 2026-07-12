@@ -52,6 +52,14 @@ public final class StructureHeuristics {
         return null;
     }
 
+    /** Strip a leading list marker (e.g. "1. foo" -> "foo", "- bar" -> "bar"). Shared by both inferrers. */
+    public static String stripMarker(String text) {
+        String t = text.trim();
+        int space = t.indexOf(' ');
+        if (space > 0 && space < 6) return t.substring(space + 1);
+        return t;
+    }
+
     /**
      * Detect tables by X-coordinate grid alignment. Groups blocks into rows (by Y proximity),
      * then finds row groups where >=2 rows share >=2 aligned X columns. Returns a list of

@@ -46,19 +46,12 @@ public class OfdStructureInferrer {
             }
             StructureHeuristics.ListMarker m = StructureHeuristics.listMarker(b.text());
             if (m != null) {
-                elements.add(StructureElement.listItem(stripMarker(b.text()),
+                elements.add(StructureElement.listItem(StructureHeuristics.stripMarker(b.text()),
                     m == StructureHeuristics.ListMarker.ORDERED));
             } else {
                 elements.add(StructureElement.paragraph(b.text(), b.fontSize()));
             }
         }
         return elements;
-    }
-
-    private static String stripMarker(String text) {
-        String t = text.trim();
-        int space = t.indexOf(' ');
-        if (space > 0 && space < 6) return t.substring(space + 1);
-        return t;
     }
 }
