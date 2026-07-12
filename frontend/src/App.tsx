@@ -90,6 +90,7 @@ export function App() {
       // Download each result and zip.
       const zip = new JSZip()
       let successCount = 0
+      const usedNames = new Set<string>()
       for (const tid of taskIds) {
         try {
           const res = await fetch(api.downloadUrl(tid))
@@ -97,7 +98,15 @@ export function App() {
           const blob = await res.blob()
           const cd = res.headers.get('Content-Disposition') || ''
           const m = cd.match(/filename\*=UTF-8''([^;]+)/) || cd.match(/filename="?([^";]+)"?/)
-          const name = m ? decodeURIComponent(m[1]) : `${tid}`
+          let name = m ? decodeURIComponent(m[1]) : `${tid}`
+          // Deduplicate: if same name already in zip, append task_id prefix.
+          if (usedNames.has(name)) {
+            const dotIdx = name.lastIndexOf('.')
+            const base = dotIdx > 0 ? name.substring(0, dotIdx) : name
+            const ext = dotIdx > 0 ? name.substring(dotIdx) : ''
+            name = `${base}_${tid.slice(0, 8)}${ext}`
+          }
+          usedNames.add(name)
           zip.file(name, blob)
           successCount++
         } catch { /* skip failed */ }
@@ -108,9 +117,11 @@ export function App() {
         return
       }
 
-      // Generate and download the zip.
+      // Generate and download the zip with timestamp to avoid filename collision.
       const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const zipName = `batch_${targetFormat}_${new Date().toISOString().slice(0, 10)}.zip`
+      const ts = new Date()
+      const tsStr = `${ts.getFullYear()}${String(ts.getMonth() + 1).padStart(2, '0')}${String(ts.getDate()).padStart(2, '0')}_${String(ts.getHours()).padStart(2, '0')}${String(ts.getMinutes()).padStart(2, '0')}${String(ts.getSeconds()).padStart(2, '0')}`
+      const zipName = `batch_${targetFormat}_${tsStr}.zip`
       const url = URL.createObjectURL(zipBlob)
       const a = document.createElement('a')
       a.href = url
