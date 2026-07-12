@@ -50,29 +50,26 @@ public class FontMappingConfig {
             EnvFont.setDefaultFont(sansFallback);
         }
 
-        // --- 2. FontLoader (for PdfboxMaker) ---
-        // Map OFD font name -> system font file path.
-        String notoSansPath = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc";
-        String notoSerifPath = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc";
-        String wqyPath = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc";
-
-        String sansPath = exists(notoSansPath) ? notoSansPath : (exists(wqyPath) ? wqyPath : null);
-        String serifPath = exists(notoSerifPath) ? notoSerifPath : sansPath;
+        // --- 2. FontLoader (for PdfboxMaker + AWTMaker/ImageExporter) ---
+        // Both PDF and image converters use FontLoader, NOT EnvFont.
+        // FontLoader needs .ttf/.otf font file paths (not .ttc collections).
+        String sansPath = findFontFile("wqy-microhei", "wqy-zenhei", "NotoSansCJK", "NotoSans");
+        String serifPath = findFontFile("wqy-zenhei", "NotoSerifCJK", sansPath);
 
         if (sansPath != null) {
             FontLoader fl = FontLoader.getInstance();
-            // addAliasMapping(ofdFontName, ofdFamilyName, systemFontName, systemFontPath)
-            fl.addAliasMapping("宋体", "宋体", "Noto Sans CJK SC", sansPath);
-            fl.addAliasMapping("SimSun", "SimSun", "Noto Sans CJK SC", sansPath);
-            fl.addAliasMapping("黑体", "黑体", "Noto Sans CJK SC", sansPath);
-            fl.addAliasMapping("SimHei", "SimHei", "Noto Sans CJK SC", sansPath);
-            fl.addAliasMapping("微软雅黑", "微软雅黑", "Noto Sans CJK SC", sansPath);
-            fl.addAliasMapping("Microsoft YaHei", "Microsoft YaHei", "Noto Sans CJK SC", sansPath);
-            if (serifPath != null) {
-                fl.addAliasMapping("楷体", "楷体", "Noto Serif CJK SC", serifPath);
-                fl.addAliasMapping("KaiTi", "KaiTi", "Noto Serif CJK SC", serifPath);
-                fl.addAliasMapping("仿宋", "仿宋", "Noto Serif CJK SC", serifPath);
-                fl.addAliasMapping("FangSong", "FangSong", "Noto Serif CJK SC", serifPath);
+            String sansFontName = "WenQuanYi Micro Hei";
+            registerFontLoader(fl, "宋体", sansFontName, sansPath);
+            registerFontLoader(fl, "SimSun", sansFontName, sansPath);
+            registerFontLoader(fl, "黑体", sansFontName, sansPath);
+            registerFontLoader(fl, "SimHei", sansFontName, sansPath);
+            registerFontLoader(fl, "微软雅黑", sansFontName, sansPath);
+            registerFontLoader(fl, "Microsoft YaHei", sansFontName, sansPath);
+            if (serifPath != null && !serifPath.equals(sansPath)) {
+                registerFontLoader(fl, "楷体", "WenQuanYi Zen Hei", serifPath);
+                registerFontLoader(fl, "KaiTi", "WenQuanYi Zen Hei", serifPath);
+                registerFontLoader(fl, "仿宋", "WenQuanYi Zen Hei", serifPath);
+                registerFontLoader(fl, "FangSong", "WenQuanYi Zen Hei", serifPath);
             }
             FontLoader.loadAsDefaultFont(sansPath);
         }
@@ -103,7 +100,39 @@ public class FontMappingConfig {
         return null;
     }
 
-    private boolean exists(String path) {
-        return java.nio.file.Files.exists(java.nio.file.Paths.get(path));
+    private void registerFontLoader(FontLoader fl, String ofdFontName, String sysFontName, String path) {
+        try {
+            fl.addAliasMapping(ofdFontName, ofdFontName, sysFontName, path);
+        } catch (Exception e) {
+            log.debug("FontLoader.addAliasMapping failed for {}: {}", ofdFontName, e.getMessage());
+        }
+    }
+
+    /** Find a CJK font file by searching common font directories. Prefers .ttf over .ttc. */
+    private String findFontFile(String... nameHints) {
+        String[] dirs = {
+            "/usr/share/fonts/truetype/wqy",
+            "/usr/share/fonts/opentype/noto",
+            "/usr/share/fonts/truetype/noto-cjk",
+            "/usr/share/fonts",
+        };
+        for (String hint : nameHints) {
+            for (String dir : dirs) {
+                java.io.File d = new java.io.File(dir);
+                if (!d.isDirectory()) continue;
+                java.io.File[] files = d.listFiles();
+                if (files == null) continue;
+                // Prefer .ttf, then .otf, then .ttc
+                for (String ext : new String[]{".ttf", ".otf", ".ttc"}) {
+                    for (java.io.File f : files) {
+                        if (f.getName().toLowerCase().contains(hint.toLowerCase())
+                            && f.getName().toLowerCase().endsWith(ext)) {
+                            return f.getAbsolutePath();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
