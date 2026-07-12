@@ -9,20 +9,28 @@ import com.ofd.converter.mcp.McpTool;
 import com.ofd.converter.model.ConvertFormat;
 import com.ofd.converter.model.SourceType;
 import com.ofd.converter.service.FileService;
+import com.ofd.converter.service.ValidationService;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Component
 public class ExtractOfdTextTool implements McpTool {
 
+    private static final int TIMEOUT_SECONDS = 30;
+
     private final FileService fileService;
     private final ConvertPipeline pipeline;
+    private final ValidationService validation;
 
-    public ExtractOfdTextTool(FileService fileService, ConvertPipeline pipeline) {
+    public ExtractOfdTextTool(FileService fileService, ConvertPipeline pipeline, ValidationService validation) {
         this.fileService = fileService;
         this.pipeline = pipeline;
+        this.validation = validation;
     }
 
     @Override
@@ -47,13 +55,26 @@ public class ExtractOfdTextTool implements McpTool {
     public Object execute(Map<String, Object> args, McpSession session) throws Exception {
         String fileId = str(args.get("file_id"));
         if (fileId == null) throw new McpErrors.McpException(McpErrors.INVALID_PARAMS, "缺少 file_id");
+        try {
+            validation.requireFileId(fileId);  // UUID check — prevents path traversal (../../etc)
+        } catch (com.ofd.converter.controller.ApiException e) {
+            throw new McpErrors.McpException(McpErrors.INVALID_PARAMS, "无效的 file_id");
+        }
         var source = fileService.uploadFile(fileId);
         var outDir = fileService.createOutputDir("mcp-text-" + fileId);
         try {
-            ConvertResult r = pipeline.run(SourceType.OFD, ConvertFormat.TXT, source, outDir,
-                source.getFileName().toString(), ConvertOptions.from(null));
+            ConvertResult r = CompletableFuture
+                .supplyAsync(() -> pipeline.run(SourceType.OFD, ConvertFormat.TXT, source, outDir,
+                    source.getFileName().toString(), ConvertOptions.from(null)))
+                .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .join();
             String text = Files.readString(r.outputFile());
             return Map.of("text", text);
+        } catch (java.util.concurrent.CompletionException e) {
+            if (e.getCause() instanceof TimeoutException) {
+                throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, "提取超时（" + TIMEOUT_SECONDS + " 秒）");
+            }
+            throw e.getCause() instanceof Exception ce ? ce : e;
         } finally {
             fileService.deleteRecursively(outDir);
         }
