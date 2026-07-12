@@ -41,8 +41,28 @@ export function App() {
     if (task) setTasks((prev) => [task, ...prev])
   }, [selectedFile, convert])
 
-  const handleDownload = useCallback((taskId: string) => {
-    window.location.href = api.downloadUrl(taskId)
+  const handleDownload = useCallback(async (taskId: string) => {
+    // Use fetch + blob + <a download> to force a download dialog (not inline display)
+    // and avoid navigation/garbled-text issues with window.location.href.
+    try {
+      const res = await fetch(api.downloadUrl(taskId))
+      if (!res.ok) throw new Error('下载失败')
+      const blob = await res.blob()
+      // Extract filename from Content-Disposition header, fallback to task id.
+      const cd = res.headers.get('Content-Disposition') || ''
+      const m = cd.match(/filename="?([^"]+)"?/)
+      const filename = m ? m[1] : taskId
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('download failed', e)
+    }
   }, [])
 
   return (

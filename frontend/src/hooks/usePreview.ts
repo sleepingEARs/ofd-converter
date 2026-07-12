@@ -1,48 +1,41 @@
 import { useState, useCallback } from 'react'
-import { parseOfdDocument, getOFDPageCount, renderOfdByIndex } from 'ofd.js'
 import type { FileItem } from '../types/api'
 
 /**
- * ofd.js preview hook. Uses the verified ofd.js 1.5.0 named-export API:
- *   parseOfdDocument({ ofd, success, fail })  (success receives base64 data, ignored here)
- *   getOFDPageCount(docIdx) -> number
- *   renderOfdByIndex(docIdx, pageIdx, dpi?=96) -> HTMLElement
+ * Preview hook - server-side rendering. OFD preview via backend OFD->PNG conversion
+ * (ofd.js 1.5.0 requires a paid license, so we render server-side with ofdrw instead).
+ * Fetches page images from /api/preview/{file_id}?page=N.
  */
 export function usePreview() {
   const [loading, setLoading] = useState(false)
-  const [pages, setPages] = useState<HTMLElement[]>([])
+  const [pages, setPages] = useState<string[]>([])  // image URLs
   const [currentPage, setCurrentPage] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
   const preview = useCallback(async (file: FileItem | null) => {
     setPages([])
     setCurrentPage(0)
+    setError(null)
     if (!file || file.source_type !== 'OFD') {
       return
     }
     setLoading(true)
     try {
-      await new Promise<void>((resolve, reject) => {
-        parseOfdDocument({
-          ofd: file.file,
-          success: () => {
-            try {
-              const count = getOFDPageCount(0)
-              const nodes = Array.from({ length: count }, (_, i) => renderOfdByIndex(0, i, 96))
-              setPages(nodes)
-              resolve()
-            } catch (e) {
-              reject(e)
-            }
-          },
-          fail: (err) => reject(err),
-        })
-      })
-    } catch {
+      const res = await fetch(`/api/preview/${file.file_id}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error?.message ?? '预览失败')
+      }
+      const data = await res.json()
+      const pageUrls = (data.pages as string[]).map((p) => `/api/preview/${file.file_id}?page=${p}`)
+      setPages(pageUrls)
+    } catch (e) {
+      setError((e as Error).message)
       setPages([])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  return { preview, loading, pages, currentPage, setCurrentPage }
+  return { preview, loading, pages, currentPage, setCurrentPage, error }
 }
