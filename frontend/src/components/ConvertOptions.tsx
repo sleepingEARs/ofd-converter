@@ -4,10 +4,14 @@ import { api } from '../api/client'
 import { LossyWarningModal } from './LossyWarningModal'
 import type { FileItem, FormatsResponse } from '../types/api'
 
-const LOSSY = new Set(['docx', 'md'])
+/** Formats that trigger a lossy conversion warning. */
+const LOSSY = new Set(['docx', 'md', 'txt'])
+
+/** Warning messages for each lossy format. */
 const LOSSY_WARNING: Record<string, string> = {
-  docx: '版式转 DOCX 为有损转换，排版可能变化，仅供参考',
-  md: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考',
+  docx: '版式转 DOCX 为有损转换，排版可能变化，仅供参考。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
+  md: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
+  txt: 'OFD 转 TXT 仅提取文本，不含排版和结构。\n发票、合同等特殊格式文件转换效果可能不理想，建议转 PDF/PNG 保留原始版式。',
 }
 
 interface Props {
@@ -44,6 +48,11 @@ export function ConvertOptions({ selectedFile, onConvert, converting }: Props) {
             {available.map((fmt) => <Radio key={fmt} value={fmt}>{fmt}</Radio>)}
           </Space>
         </Radio.Group>
+        {target && LOSSY.has(target) && (
+          <div style={{ padding: '6px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, fontSize: 13 }}>
+            ⚠️ 该格式为有损转换，发票、合同等特殊格式文件效果可能不理想，建议转 PDF/PNG 保留原始版式。
+          </div>
+        )}
         <Button type="primary" disabled={!target || converting} loading={converting} onClick={startConvert}>
           开始转换
         </Button>

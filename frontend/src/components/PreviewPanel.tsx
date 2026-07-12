@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Card, Pagination, Spin, Empty } from 'antd'
+import { Card, Pagination, Spin, Empty, Alert } from 'antd'
 import { usePreview } from '../hooks/usePreview'
 import type { FileItem } from '../types/api'
 
@@ -29,9 +29,19 @@ export function PreviewPanel({ file }: Props) {
     <Card title="预览" style={{ height: '100%', overflow: 'auto' }}>
       <Spin spinning={loading}>
         {error ? (
-          <Empty description={`预览失败: ${error}`} />
+          <Alert
+            type="warning"
+            message="预览失败"
+            description={`${error}\n\n可能原因：该文件包含全图片内容、加密或特殊格式。建议转 PDF/PNG 查看原始版式。`}
+            showIcon
+          />
         ) : pages.length === 0 && !loading ? (
-          <Empty description="无预览内容" />
+          <Alert
+            type="info"
+            message="无预览内容"
+            description="该文件可能为纯图片内容（无文本图层），预览不可用。建议转 PDF/PNG 查看原始版式。"
+            showIcon
+          />
         ) : (
           <div ref={containerRef} style={{ textAlign: 'center' }}>
             {pages[currentPage] && (
