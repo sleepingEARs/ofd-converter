@@ -25,7 +25,7 @@ export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds
       bordered
       dataSource={files}
       locale={{ emptyText: '暂无文件' }}
-      style={{ maxHeight: 500, overflow: 'auto' }}
+      style={{ height: 842, overflow: 'auto' }}
       header={
         files.length > 0 ? (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

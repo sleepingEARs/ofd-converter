@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { Card, Pagination, Spin, Empty, Alert } from 'antd'
 import { usePreview } from '../hooks/usePreview'
 import type { FileItem } from '../types/api'
@@ -8,7 +8,6 @@ interface Props {
 }
 
 export function PreviewPanel({ file }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const { preview, loading, pages, currentPage, setCurrentPage, error } = usePreview()
 
   useEffect(() => {
@@ -24,10 +23,10 @@ export function PreviewPanel({ file }: Props) {
 
   return (
     <Card title="预览" style={{ height: 842, display: 'flex', flexDirection: 'column' }}
-      styles={{ body: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center' } }}
+      styles={{ body: { flex: 1, overflow: 'hidden', padding: 8, display: 'flex', flexDirection: 'column' } }}
     >
-      <div ref={containerRef} style={{ flex: 1, width: '100%', textAlign: 'center', overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-        <Spin spinning={loading} style={{ width: '100%', height: '100%' }}>
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+        <Spin spinning={loading}>
           {error ? (
             <Alert
               type="warning"
@@ -47,7 +46,7 @@ export function PreviewPanel({ file }: Props) {
               <img
                 src={pages[currentPage]}
                 alt={`第 ${currentPage + 1} 页`}
-                style={{ maxWidth: '100%', maxHeight: 780, objectFit: 'contain', border: '1px solid #e0e0e0' }}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', border: '1px solid #e0e0e0' }}
               />
             )
           )}
@@ -59,7 +58,7 @@ export function PreviewPanel({ file }: Props) {
           total={pages.length}
           pageSize={1}
           onChange={(p) => setCurrentPage(p - 1)}
-          style={{ marginTop: 8, textAlign: 'center', flexShrink: 0, paddingBottom: 4 }}
+          style={{ marginTop: 4, textAlign: 'center', flexShrink: 0, paddingBottom: 4 }}
         />
       )}
     </Card>
