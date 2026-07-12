@@ -52,13 +52,13 @@ public class FontMappingConfig {
 
         // --- 2. FontLoader (for PdfboxMaker + AWTMaker/ImageExporter) ---
         // Both PDF and image converters use FontLoader, NOT EnvFont.
-        // FontLoader needs .ttf/.otf font file paths (not .ttc collections).
-        String sansPath = findFontFile("wqy-microhei", "wqy-zenhei", "NotoSansCJK", "NotoSans");
+        // FontLoader needs standalone .otf/.ttf font file paths.
+        String sansPath = findFontFile("NotoSansCJKsc", "wqy-microhei", "wqy-zenhei", "NotoSansCJK");
         String serifPath = findFontFile("wqy-zenhei", "NotoSerifCJK", sansPath);
 
         if (sansPath != null) {
             FontLoader fl = FontLoader.getInstance();
-            String sansFontName = "WenQuanYi Micro Hei";
+            String sansFontName = "Noto Sans CJK SC";
             registerFontLoader(fl, "宋体", sansFontName, sansPath);
             registerFontLoader(fl, "SimSun", sansFontName, sansPath);
             registerFontLoader(fl, "黑体", sansFontName, sansPath);
@@ -72,6 +72,7 @@ public class FontMappingConfig {
                 registerFontLoader(fl, "FangSong", "WenQuanYi Zen Hei", serifPath);
             }
             FontLoader.loadAsDefaultFont(sansPath);
+            log.info("FontLoader default font: {} -> {}", sansFontName, sansPath);
         }
 
         log.info("Font mappings registered: EnvFont(宋体->{}) + FontLoader(path={})",
