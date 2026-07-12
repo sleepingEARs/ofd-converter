@@ -96,8 +96,11 @@ public class ConvertController {
         }
         logService.record(OperationType.DOWNLOAD, ClientIpInterceptor.extractIp(req), null,
             taskId, null, "SUCCESS", 0, null, req.getHeader("User-Agent"));
+        // RFC 5987: URL-encode filename for non-ASCII (Chinese) chars to avoid
+        // Tomcat rejecting the Content-Disposition header.
+        String encodedName = java.net.URLEncoder.encode(t.getOutputFilename(), java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + t.getOutputFilename() + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName)
             .body(new FileSystemResource(file));
     }
 

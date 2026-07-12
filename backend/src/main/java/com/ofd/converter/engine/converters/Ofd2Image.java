@@ -9,7 +9,7 @@ import org.ofdrw.converter.export.ImageExporter;
 import java.nio.file.*;
 
 /**
- * OFD → image (PNG/JPG). ofdrw's ImageExporter writes one image file per page into a
+ * OFD -> image (PNG/JPG). ofdrw's ImageExporter writes one image file per page into a
  * subdirectory; we zip that directory into a single {base}_images.zip for download.
  */
 public class Ofd2Image implements Converter {
@@ -30,12 +30,19 @@ public class Ofd2Image implements Converter {
     @Override
     public ConvertResult convert(Path source, Path outputDir, String sourceFilename, ConvertOptions opts) throws Exception {
         double ppm = opts != null && opts.dpi() != null ? opts.dpi() / 25.4 : 15d;
+        String base = Ofd2Pdf.basename(sourceFilename, ".ofd");
+
+        // Pre-clean: strip annotation elements that would cause ofdrw NPE.
+        Path cleanedOfd = outputDir.resolve(base + "_clean.ofd");
+        OfdAnnotationCleaner.clean(source, cleanedOfd);
+
         Path imgDir = outputDir.resolve("pages");
         Files.createDirectories(imgDir);
-        try (ImageExporter ex = new ImageExporter(source, imgDir, format.name(), ppm)) {
+        try (ImageExporter ex = new ImageExporter(cleanedOfd, imgDir, format.name(), ppm)) {
             ex.export();
+        } finally {
+            Files.deleteIfExists(cleanedOfd);
         }
-        String base = Ofd2Pdf.basename(sourceFilename, ".ofd");
         Path zip = fileService.zipDir(imgDir, base + "_images.zip");
         Path finalZip = outputDir.resolve(base + "_images.zip");
         if (!zip.equals(finalZip)) {

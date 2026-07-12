@@ -48,10 +48,10 @@ export function App() {
       const res = await fetch(api.downloadUrl(taskId))
       if (!res.ok) throw new Error('下载失败')
       const blob = await res.blob()
-      // Extract filename from Content-Disposition header, fallback to task id.
+      // Extract filename from Content-Disposition header (RFC 5987 filename*=UTF-8'').
       const cd = res.headers.get('Content-Disposition') || ''
-      const m = cd.match(/filename="?([^"]+)"?/)
-      const filename = m ? m[1] : taskId
+      const m = cd.match(/filename\*=UTF-8''([^;]+)/) || cd.match(/filename="?([^";]+)"?/)
+      const filename = m ? decodeURIComponent(m[1]) : taskId
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
