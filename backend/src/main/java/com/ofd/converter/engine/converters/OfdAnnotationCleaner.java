@@ -30,21 +30,25 @@ public final class OfdAnnotationCleaner {
     /**
      * Creates a cleaned copy of the OFD with:
      * 1. Empty Appearance injected into Annot elements that lack one.
-     * 2. Tpls/ directory renamed to TPLS/ (ofdrw hardcodes uppercase TPLS path).
-     * Returns the path to the cleaned OFD.
+     * 2. Tpls/ -> TPLS/ in BOTH zip entry names AND XML path references.
+     *    (ofdrw's ResourceLocator is case-sensitive on Linux; OFD files from some
+     *    editors use "Tpls/" but ofdrw expects "TPLS/".)
      */
     public static Path clean(Path source, Path target) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(source));
              ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(target))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                // Fix Tpls/ -> TPLS/ in entry names (ofdrw hardcodes uppercase).
+                // Rename Tpls/ -> TPLS/ in zip entry names.
                 String name = entry.getName().replace("/Tpls/", "/TPLS/");
                 if (name.startsWith("Tpls/")) name = "TPLS/" + name.substring(5);
                 zos.putNextEntry(new ZipEntry(name));
                 if (name.endsWith(".xml")) {
                     String xml = new String(zis.readAllBytes());
                     xml = injectEmptyAppearance(xml);
+                    // Also fix Tpls/ -> TPLS/ in XML path references (e.g. in Document.xml,
+                    // Page Content.xml: <ofd:Template TemplateID="2" BaseLoc="Tpls/Tpl_0/Content.xml"/>)
+                    xml = xml.replace("Tpls/", "TPLS/");
                     zos.write(xml.getBytes());
                 } else {
                     zis.transferTo(zos);
