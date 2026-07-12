@@ -51,32 +51,31 @@ public class FontMappingConfig {
         }
 
         // --- 2. FontLoader (for PdfboxMaker + AWTMaker/ImageExporter) ---
-        // Both PDF and image converters use FontLoader, NOT EnvFont.
-        // FontLoader needs standalone .otf/.ttf font file paths.
-        String sansPath = findFontFile("NotoSansCJKsc", "wqy-microhei", "wqy-zenhei", "NotoSansCJK");
-        String serifPath = findFontFile("wqy-zenhei", "NotoSerifCJK", sansPath);
+        // PdfboxMaker (PDF) requires TrueType (.ttf with glyf table) - CFF/OTF causes
+        // UnsupportedOperationException. AWTMaker (images) handles both.
+        // Use wqy-microhei.ttf (TrueType) for PDF, NotoSansCJKsc.otf for images.
+        String ttfPath = findFontFile("wqy-microhei", "wqy-zenhei");  // TrueType for PDF
+        String otfPath = findFontFile("NotoSansCJKsc", ttfPath);       // OTF for images (broader coverage)
 
-        if (sansPath != null) {
+        if (ttfPath != null) {
             FontLoader fl = FontLoader.getInstance();
-            String sansFontName = "Noto Sans CJK SC";
-            registerFontLoader(fl, "宋体", sansFontName, sansPath);
-            registerFontLoader(fl, "SimSun", sansFontName, sansPath);
-            registerFontLoader(fl, "黑体", sansFontName, sansPath);
-            registerFontLoader(fl, "SimHei", sansFontName, sansPath);
-            registerFontLoader(fl, "微软雅黑", sansFontName, sansPath);
-            registerFontLoader(fl, "Microsoft YaHei", sansFontName, sansPath);
-            if (serifPath != null && !serifPath.equals(sansPath)) {
-                registerFontLoader(fl, "楷体", "WenQuanYi Zen Hei", serifPath);
-                registerFontLoader(fl, "KaiTi", "WenQuanYi Zen Hei", serifPath);
-                registerFontLoader(fl, "仿宋", "WenQuanYi Zen Hei", serifPath);
-                registerFontLoader(fl, "FangSong", "WenQuanYi Zen Hei", serifPath);
-            }
-            FontLoader.loadAsDefaultFont(sansPath);
-            log.info("FontLoader default font: {} -> {}", sansFontName, sansPath);
+            String ttfFontName = "WenQuanYi Micro Hei";
+            registerFontLoader(fl, "宋体", ttfFontName, ttfPath);
+            registerFontLoader(fl, "SimSun", ttfFontName, ttfPath);
+            registerFontLoader(fl, "黑体", ttfFontName, ttfPath);
+            registerFontLoader(fl, "SimHei", ttfFontName, ttfPath);
+            registerFontLoader(fl, "微软雅黑", ttfFontName, ttfPath);
+            registerFontLoader(fl, "Microsoft YaHei", ttfFontName, ttfPath);
+            registerFontLoader(fl, "楷体", ttfFontName, ttfPath);
+            registerFontLoader(fl, "KaiTi", ttfFontName, ttfPath);
+            registerFontLoader(fl, "仿宋", ttfFontName, ttfPath);
+            registerFontLoader(fl, "FangSong", ttfFontName, ttfPath);
+            FontLoader.loadAsDefaultFont(ttfPath);
+            log.info("FontLoader default font (TrueType): {} -> {}", ttfFontName, ttfPath);
         }
 
         log.info("Font mappings registered: EnvFont(宋体->{}) + FontLoader(path={})",
-            sansFallback != null ? sansFallback.getFontName() : "N/A", sansPath);
+            sansFallback != null ? sansFallback.getFontName() : "N/A", ttfPath);
     }
 
     private void registerEnvFontMapping(String name, Font font) {
