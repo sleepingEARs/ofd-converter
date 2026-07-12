@@ -13,21 +13,20 @@ export function PreviewPanel({ file }: Props) {
 
   useEffect(() => {
     void preview(file)
-    // Depend on file_id (primitive) not the file object reference: App computes
-    // selectedFile via files.find() each render, producing a new reference, which
-    // would otherwise re-trigger preview on every poll-driven re-render.
   }, [file?.file_id, preview])
 
   if (!file) {
-    return <Card title="预览"><Empty description="请选择文件预览" /></Card>
+    return <Card title="预览" style={{ height: 500 }}><Empty description="请选择文件预览" /></Card>
   }
   if (file.source_type !== 'OFD') {
-    return <Card title="预览"><Empty description="不支持预览" /></Card>
+    return <Card title="预览" style={{ height: 500 }}><Empty description="不支持预览" /></Card>
   }
 
   return (
-    <Card title="预览" style={{ height: '100%', overflow: 'auto' }}>
-      <Spin spinning={loading}>
+    <Card title="预览" style={{ height: 500, display: 'flex', flexDirection: 'column' }}
+      styles={{ body: { flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' } }}
+    >
+      <Spin spinning={loading} style={{ width: '100%' }}>
         {error ? (
           <Alert
             type="warning"
@@ -43,12 +42,12 @@ export function PreviewPanel({ file }: Props) {
             showIcon
           />
         ) : (
-          <div ref={containerRef} style={{ textAlign: 'center' }}>
+          <div ref={containerRef} style={{ textAlign: 'center', width: '100%' }}>
             {pages[currentPage] && (
               <img
                 src={pages[currentPage]}
                 alt={`第 ${currentPage + 1} 页`}
-                style={{ maxWidth: '100%', border: '1px solid #e0e0e0' }}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', border: '1px solid #e0e0e0' }}
               />
             )}
           </div>
@@ -60,7 +59,7 @@ export function PreviewPanel({ file }: Props) {
           total={pages.length}
           pageSize={1}
           onChange={(p) => setCurrentPage(p - 1)}
-          style={{ marginTop: 12, textAlign: 'center' }}
+          style={{ marginTop: 8, textAlign: 'center', flexShrink: 0 }}
         />
       )}
     </Card>

@@ -1,4 +1,4 @@
-import { List, Tag, Button, Checkbox, Space } from 'antd'
+import { List, Tag, Button, Checkbox } from 'antd'
 import type { FileItem } from '../types/api'
 
 interface Props {
@@ -28,14 +28,14 @@ export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds
       style={{ maxHeight: 500, overflow: 'auto' }}
       header={
         files.length > 0 ? (
-          <Space>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Checkbox checked={allChecked} onChange={onToggleAll}>全选</Checkbox>
             {checkedIds.size > 0 && (
               <Button type="link" danger size="small" onClick={onBatchDelete}>
                 删除选中 ({checkedIds.size})
               </Button>
             )}
-          </Space>
+          </div>
         ) : undefined
       }
       renderItem={(f) => (
