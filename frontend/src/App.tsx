@@ -29,7 +29,13 @@ export function App() {
   useTaskPolling(tasks, onUpdateTask)
 
   const handleUploaded = useCallback((f: FileItem) => {
-    setFiles((prev) => [...prev, f])
+    setFiles((prev) => {
+      if (prev.length >= MAX_TOTAL_FILES) {
+        message.warning(`最多同时上传 ${MAX_TOTAL_FILES} 个文件`)
+        return prev
+      }
+      return [...prev, f]
+    })
   }, [])
 
   const handleDelete = useCallback((fileId: string) => {
@@ -55,11 +61,20 @@ export function App() {
 
   const allChecked = files.length > 0 && checkedIds.size === files.length
 
+  // Max total files allowed (50).
+  const MAX_TOTAL_FILES = 50
+
   const handleConvert = useCallback(async (targetFormat: string) => {
     if (checkedIds.size > 0) {
       // --- Batch convert ---
       const checkedFiles = files.filter((f) => checkedIds.has(f.file_id))
       if (checkedFiles.length === 0) return
+
+      // Check source format consistency in batch mode.
+      const sourceTypes = new Set(checkedFiles.map((f) => f.source_type))
+      if (sourceTypes.size > 1) {
+        message.warning('所选文件包含不同源格式，批量转换可能产生不一致结果。建议按源格式分组转换。')
+      }
 
       message.loading({ content: `正在批量转换 ${checkedFiles.length} 个文件...`, key: 'batch', duration: 0 })
 

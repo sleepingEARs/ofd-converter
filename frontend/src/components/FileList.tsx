@@ -24,6 +24,7 @@ export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds
       bordered
       dataSource={files}
       locale={{ emptyText: '暂无文件' }}
+      style={{ maxHeight: 500, overflow: 'auto' }}
       header={
         files.length > 0 ? (
           <Checkbox checked={allChecked} onChange={onToggleAll}>全选</Checkbox>
