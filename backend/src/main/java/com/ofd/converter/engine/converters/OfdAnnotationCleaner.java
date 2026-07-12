@@ -28,16 +28,21 @@ public final class OfdAnnotationCleaner {
     );
 
     /**
-     * Creates a cleaned copy of the OFD with empty Appearance injected into Annot
-     * elements that lack one. Returns the path to the cleaned OFD.
+     * Creates a cleaned copy of the OFD with:
+     * 1. Empty Appearance injected into Annot elements that lack one.
+     * 2. Tpls/ directory renamed to TPLS/ (ofdrw hardcodes uppercase TPLS path).
+     * Returns the path to the cleaned OFD.
      */
     public static Path clean(Path source, Path target) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(source));
              ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(target))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                zos.putNextEntry(new ZipEntry(entry.getName()));
-                if (entry.getName().endsWith(".xml")) {
+                // Fix Tpls/ -> TPLS/ in entry names (ofdrw hardcodes uppercase).
+                String name = entry.getName().replace("/Tpls/", "/TPLS/");
+                if (name.startsWith("Tpls/")) name = "TPLS/" + name.substring(5);
+                zos.putNextEntry(new ZipEntry(name));
+                if (name.endsWith(".xml")) {
                     String xml = new String(zis.readAllBytes());
                     xml = injectEmptyAppearance(xml);
                     zos.write(xml.getBytes());
