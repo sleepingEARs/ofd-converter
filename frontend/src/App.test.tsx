@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
 
 // Mock ofd.js so PreviewPanel doesn't load the real (UMD) module in jsdom.
@@ -34,7 +35,7 @@ describe('App', () => {
     }))
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    render(<App />)
+    render(<MemoryRouter><App /></MemoryRouter>)
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     await user.upload(input, new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04])], 'a.ofd'))
     await waitFor(() => expect(screen.getByText('a.ofd')).toBeInTheDocument())
