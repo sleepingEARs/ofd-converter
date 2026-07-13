@@ -81,8 +81,10 @@ public class LogService {
         logExecutor.submit(() -> {
             try {
                 repo.save(entry);
+                log.info("log saved: type={} status={} fileId={} taskId={}",
+                    type.name(), status, fileId, taskId);
             } catch (Exception e) {
-                log.warn("log write failed", e);
+                log.error("log write failed: type={} status={}", type.name(), status, e);
             }
         });
     }
@@ -90,6 +92,7 @@ public class LogService {
     public AdminLogsResponse queryLogs(int page, int size, String operationType,
                                         String status, Long startDate, Long endDate,
                                         String search) {
+        try {
         StringBuilder where = new StringBuilder();
         List<Object> params = new ArrayList<>();
 
@@ -132,5 +135,9 @@ public class LogService {
             ADMIN_ROW_MAPPER, listParams.toArray());
 
         return new AdminLogsResponse(logs, total, page, size);
+        } catch (Exception e) {
+            log.error("queryLogs failed: page={} size={} opType={} status={}", page, size, operationType, status, e);
+            throw e;
+        }
     }
 }
