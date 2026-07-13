@@ -11,9 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 
 @Service
@@ -92,28 +90,27 @@ public class LogService {
     public AdminLogsResponse queryLogs(int page, int size, String operationType,
                                         String status, Long startDate, Long endDate,
                                         String search) {
-        try {
         StringBuilder where = new StringBuilder();
         List<Object> params = new ArrayList<>();
 
         if (operationType != null && !operationType.isBlank()) {
-            where.append(" AND o.operation_type = ?");
+            where.append(" AND operation_type = ?");
             params.add(operationType.toUpperCase());
         }
         if (status != null && !status.isBlank()) {
-            where.append(" AND o.status = ?");
+            where.append(" AND status = ?");
             params.add(status.toUpperCase());
         }
         if (startDate != null) {
-            where.append(" AND o.created_at >= ?");
+            where.append(" AND created_at >= ?");
             params.add(startDate);
         }
         if (endDate != null) {
-            where.append(" AND o.created_at <= ?");
+            where.append(" AND created_at <= ?");
             params.add(endDate);
         }
         if (search != null && !search.isBlank()) {
-            where.append(" AND (t.source_filename LIKE ? OR o.client_ip LIKE ? OR o.task_id LIKE ?)");
+            where.append(" AND (client_ip LIKE ? OR task_id LIKE ? OR task_id IN (SELECT id FROM task WHERE source_filename LIKE ?))");
             String like = "%" + search + "%";
             params.add(like);
             params.add(like);
@@ -121,9 +118,8 @@ public class LogService {
         }
 
         String whereClause = where.toString();
-        String from = " FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1";
         long total = jdbc.queryForObject(
-            "SELECT COUNT(*)" + from + whereClause,
+            "SELECT COUNT(*) FROM operation_log WHERE 1=1" + whereClause,
             Long.class, params.toArray());
 
         int offset = (page - 1) * size;
@@ -131,16 +127,36 @@ public class LogService {
         listParams.add(size);
         listParams.add(offset);
         List<AdminLogEntry> logs = jdbc.query(
-            "SELECT o.id, o.operation_type, o.client_ip, o.file_id, o.task_id,"
-                + " o.target_format, o.status, o.duration_ms, o.error_message,"
-                + " o.user_agent, o.created_at, t.source_filename AS filename"
-                + from + whereClause + " ORDER BY o.created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, operation_type, client_ip, file_id, task_id,"
+                + " target_format, status, duration_ms, error_message,"
+                + " user_agent, created_at, NULL AS filename"
+                + " FROM operation_log WHERE 1=1" + whereClause
+                + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             ADMIN_ROW_MAPPER, listParams.toArray());
 
-        return new AdminLogsResponse(logs, total, page, size);
-        } catch (Exception e) {
-            log.error("queryLogs failed: page={} size={} opType={} status={}", page, size, operationType, status, e);
-            throw e;
+        // Batch-fill filenames from task table.
+        List<String> taskIds = logs.stream()
+            .map(AdminLogEntry::task_id)
+            .filter(tid -> tid != null && !tid.isBlank())
+            .distinct()
+            .toList();
+        if (!taskIds.isEmpty()) {
+            String placeholders = taskIds.stream().map(t -> "?").reduce((a, b) -> a + "," + b).orElse("");
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id, source_filename FROM task WHERE id IN (" + placeholders + ")",
+                taskIds.toArray());
+            Map<String, String> nameMap = new java.util.HashMap<>();
+            for (var row : rows) {
+                nameMap.put((String) row.get("id"), (String) row.get("source_filename"));
+            }
+            logs = logs.stream()
+                .map(e -> new AdminLogEntry(e.id(), e.operation_type(), e.client_ip(),
+                    e.file_id(), e.task_id(), e.target_format(), e.status(),
+                    e.duration_ms(), e.error_message(), e.user_agent(),
+                    e.created_at(), nameMap.get(e.task_id())))
+                .toList();
         }
+
+        return new AdminLogsResponse(logs, total, page, size);
     }
 }
