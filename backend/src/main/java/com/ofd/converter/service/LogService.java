@@ -121,8 +121,9 @@ public class LogService {
         }
 
         String whereClause = where.toString();
+        String from = " FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1";
         long total = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1" + whereClause,
+            "SELECT COUNT(*)" + from + whereClause,
             Long.class, params.toArray());
 
         int offset = (page - 1) * size;
@@ -130,8 +131,10 @@ public class LogService {
         listParams.add(size);
         listParams.add(offset);
         List<AdminLogEntry> logs = jdbc.query(
-            "SELECT o.*, t.source_filename AS filename FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1"
-                + whereClause + " ORDER BY o.created_at DESC LIMIT ? OFFSET ?",
+            "SELECT o.id, o.operation_type, o.client_ip, o.file_id, o.task_id,"
+                + " o.target_format, o.status, o.duration_ms, o.error_message,"
+                + " o.user_agent, o.created_at, t.source_filename AS filename"
+                + from + whereClause + " ORDER BY o.created_at DESC LIMIT ? OFFSET ?",
             ADMIN_ROW_MAPPER, listParams.toArray());
 
         return new AdminLogsResponse(logs, total, page, size);
