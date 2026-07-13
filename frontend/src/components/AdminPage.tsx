@@ -2,9 +2,14 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Layout, Table, Select, Input, Button, DatePicker, Space, Typography, message,
 } from 'antd'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import locale from 'antd/locale/zh_CN'
 import { api, clearAdminToken } from '../api/client'
 import type { AdminLogEntry, AdminLogsResponse } from '../types/api'
 import type { ColumnsType } from 'antd/es/table'
+
+dayjs.locale('zh-cn')
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -34,14 +39,15 @@ const COLUMNS: ColumnsType<AdminLogEntry> = [
       const colors: Record<string, string> = { SUCCESS: '#52c41a', FAILED: '#ff4d4f', TIMEOUT: '#faad14', PENDING: '#1890ff' }
       return <span style={{ color: colors[v] || '#999' }}>{v}</span>
     } },
+  { title: '文件名', dataIndex: 'filename', key: 'filename', ellipsis: true,
+    render: (v: string | null) => v || '-' },
   { title: '客户端IP', dataIndex: 'client_ip', key: 'client_ip', width: 130 },
-  { title: '文件ID', dataIndex: 'file_id', key: 'file_id', width: 120, ellipsis: true },
   { title: '任务ID', dataIndex: 'task_id', key: 'task_id', width: 120, ellipsis: true },
   { title: '目标格式', dataIndex: 'target_format', key: 'target_format', width: 80 },
   { title: '耗时(ms)', dataIndex: 'duration_ms', key: 'duration_ms', width: 90 },
   { title: '错误信息', dataIndex: 'error_message', key: 'error_message', ellipsis: true },
   { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 170,
-    render: (v: number) => v ? new Date(v).toLocaleString('zh-CN') : '-' },
+    render: (v: number) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-' },
 ]
 
 export function AdminPage() {
@@ -52,7 +58,6 @@ export function AdminPage() {
   const [filters, setFilters] = useState<Record<string, string | number | undefined>>({})
   const [pagination, setPagination] = useState({ page: 1, size: 20 })
 
-  // 检查 sessionStorage 中是否已有 token
   useEffect(() => {
     if (sessionStorage.getItem('admin_token')) {
       setAuthed(true)
@@ -78,7 +83,6 @@ export function AdminPage() {
     }
   }, [filters])
 
-  // 登录后自动查询
   useEffect(() => {
     if (authed) {
       fetchLogs(1, 20)
@@ -87,7 +91,6 @@ export function AdminPage() {
 
   const handleLogin = async () => {
     if (!password) return
-    // 先验证密码
     try {
       const res = await fetch('/api/admin/logs?page=1&size=1', {
         headers: { 'X-Admin-Token': password },
@@ -118,7 +121,6 @@ export function AdminPage() {
     setData(null)
   }
 
-  // 未认证 → 登录表单
   if (!authed) {
     return (
       <Layout style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -137,9 +139,8 @@ export function AdminPage() {
     )
   }
 
-  // 已认证 → 日志列表
   return (
-    <Layout style={{ minHeight: '100vh', padding: 24 }}>
+    <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>转换日志</Title>
         <Space>
@@ -147,7 +148,6 @@ export function AdminPage() {
         </Space>
       </div>
 
-      {/* 筛选栏 */}
       <Space wrap style={{ marginBottom: 16 }}>
         <Select
           placeholder="操作类型"
@@ -167,6 +167,7 @@ export function AdminPage() {
         />
         <RangePicker
           showTime
+          locale={locale.DatePicker}
           placeholder={['开始时间', '结束时间']}
           onChange={(dates) => {
             setFilters((f) => ({
@@ -177,9 +178,9 @@ export function AdminPage() {
           }}
         />
         <Input.Search
-          placeholder="搜索 IP / 文件ID / 任务ID"
+          placeholder="搜索文件名 / IP / 任务ID"
           allowClear
-          style={{ width: 240 }}
+          style={{ width: 260 }}
           value={filters.search as string || ''}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value || undefined }))}
           onSearch={handleSearch}
@@ -203,7 +204,7 @@ export function AdminPage() {
         scroll={{ x: 1100 }}
         size="small"
       />
-    </Layout>
+    </div>
   )
 }
 

@@ -66,6 +66,7 @@ export interface AdminLogEntry {
   error_message: string | null
   user_agent: string | null
   created_at: number
+  filename: string | null
 }
 
 export interface AdminLogsResponse {

@@ -10,6 +10,7 @@ services:
       - OFD_DB_PATH=/data/converter.db
       - FILE_RETENTION_HOURS=24
       - LOG_RETENTION_DAYS=90
+      - ADMIN_PASSWORD=test123
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
       interval: 30s
@@ -20,7 +21,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "8081:80"
     depends_on:
       backend:
         condition: service_healthy

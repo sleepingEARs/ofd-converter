@@ -180,9 +180,11 @@ export function App() {
       <Content style={{ padding: 24, maxWidth: 1000, margin: '0 auto', width: '100%' }}>
         <Routes>
           <Route path="/" element={<ConverterPage />} />
-          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Content>
+      <Routes>
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
     </Layout>
   )
 }

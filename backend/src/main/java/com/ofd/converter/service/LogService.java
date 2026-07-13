@@ -1,6 +1,7 @@
 package com.ofd.converter.service;
 
 import com.ofd.converter.model.*;
+import com.ofd.converter.model.dto.AdminLogEntry;
 import com.ofd.converter.model.dto.AdminLogsResponse;
 import com.ofd.converter.repository.OperationLogRepository;
 import org.slf4j.Logger;
@@ -38,6 +39,22 @@ public class LogService {
         entry.markNotNew();
         return entry;
     };
+
+    private static final RowMapper<AdminLogEntry> ADMIN_ROW_MAPPER = (rs, rowNum) ->
+        new AdminLogEntry(
+            rs.getString("id"),
+            rs.getString("operation_type"),
+            rs.getString("client_ip"),
+            rs.getString("file_id"),
+            rs.getString("task_id"),
+            rs.getString("target_format"),
+            rs.getString("status"),
+            (Long) rs.getObject("duration_ms"),
+            rs.getString("error_message"),
+            rs.getString("user_agent"),
+            rs.getLong("created_at"),
+            rs.getString("filename")
+        );
 
     public LogService(OperationLogRepository repo, JdbcTemplate jdbc,
                       @Qualifier("logExecutor") ExecutorService logExecutor) {
@@ -77,23 +94,23 @@ public class LogService {
         List<Object> params = new ArrayList<>();
 
         if (operationType != null && !operationType.isBlank()) {
-            where.append(" AND operation_type = ?");
+            where.append(" AND o.operation_type = ?");
             params.add(operationType.toUpperCase());
         }
         if (status != null && !status.isBlank()) {
-            where.append(" AND status = ?");
+            where.append(" AND o.status = ?");
             params.add(status.toUpperCase());
         }
         if (startDate != null) {
-            where.append(" AND created_at >= ?");
+            where.append(" AND o.created_at >= ?");
             params.add(startDate);
         }
         if (endDate != null) {
-            where.append(" AND created_at <= ?");
+            where.append(" AND o.created_at <= ?");
             params.add(endDate);
         }
         if (search != null && !search.isBlank()) {
-            where.append(" AND (client_ip LIKE ? OR file_id LIKE ? OR task_id LIKE ?)");
+            where.append(" AND (t.source_filename LIKE ? OR o.client_ip LIKE ? OR o.task_id LIKE ?)");
             String like = "%" + search + "%";
             params.add(like);
             params.add(like);
@@ -102,16 +119,17 @@ public class LogService {
 
         String whereClause = where.toString();
         long total = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM operation_log WHERE 1=1" + whereClause,
+            "SELECT COUNT(*) FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1" + whereClause,
             Long.class, params.toArray());
 
         int offset = (page - 1) * size;
         List<Object> listParams = new ArrayList<>(params);
         listParams.add(size);
         listParams.add(offset);
-        List<OperationLog> logs = jdbc.query(
-            "SELECT * FROM operation_log WHERE 1=1" + whereClause + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            ROW_MAPPER, listParams.toArray());
+        List<AdminLogEntry> logs = jdbc.query(
+            "SELECT o.*, t.source_filename AS filename FROM operation_log o LEFT JOIN task t ON o.task_id = t.id WHERE 1=1"
+                + whereClause + " ORDER BY o.created_at DESC LIMIT ? OFFSET ?",
+            ADMIN_ROW_MAPPER, listParams.toArray());
 
         return new AdminLogsResponse(logs, total, page, size);
     }
