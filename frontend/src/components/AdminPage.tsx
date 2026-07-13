@@ -29,25 +29,28 @@ const STATUS_TYPES = [
 ]
 
 const COLUMNS: ColumnsType<AdminLogEntry> = [
-  { title: '操作类型', dataIndex: 'operation_type', key: 'operation_type', width: 100,
+  { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 160,
+    render: (v: number) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-' },
+  { title: '操作类型', dataIndex: 'operation_type', key: 'operation_type', width: 90,
     render: (v: string) => {
       const m: Record<string, string> = { UPLOAD: '上传', CONVERT: '转换', DOWNLOAD: '下载', MCP_CALL: 'MCP' }
       return m[v] || v
     } },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 80,
+  { title: '状态', dataIndex: 'status', key: 'status', width: 70,
     render: (v: string) => {
       const colors: Record<string, string> = { SUCCESS: '#52c41a', FAILED: '#ff4d4f', TIMEOUT: '#faad14', PENDING: '#1890ff' }
-      return <span style={{ color: colors[v] || '#999' }}>{v}</span>
+      const labels: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', TIMEOUT: '超时', PENDING: '处理中' }
+      return <span style={{ color: colors[v] || '#999' }}>{labels[v] || v}</span>
     } },
   { title: '文件名', dataIndex: 'filename', key: 'filename', ellipsis: true,
     render: (v: string | null) => v || '-' },
   { title: '客户端IP', dataIndex: 'client_ip', key: 'client_ip', width: 130 },
+  { title: '客户端UA', dataIndex: 'user_agent', key: 'user_agent', width: 200, ellipsis: true },
   { title: '任务ID', dataIndex: 'task_id', key: 'task_id', width: 120, ellipsis: true },
   { title: '目标格式', dataIndex: 'target_format', key: 'target_format', width: 80 },
-  { title: '耗时(ms)', dataIndex: 'duration_ms', key: 'duration_ms', width: 90 },
+  { title: '耗时', dataIndex: 'duration_ms', key: 'duration_ms', width: 80,
+    render: (v: number | null) => v != null ? `${v}ms` : '-' },
   { title: '错误信息', dataIndex: 'error_message', key: 'error_message', ellipsis: true },
-  { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 170,
-    render: (v: number) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-' },
 ]
 
 export function AdminPage() {
