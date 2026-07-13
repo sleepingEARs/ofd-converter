@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Layout, Typography, message, Button } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import JSZip from 'jszip'
@@ -169,12 +169,19 @@ function ConverterPage() {
 }
 
 export function App() {
+  const location = useLocation()
+  const isAdmin = location.pathname === '/admin'
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={3} style={{ color: 'white', margin: '12px 0' }}>OFD 转换工具</Title>
-        <Link to="/admin">
-          <Button type="text" icon={<SettingOutlined />} style={{ color: 'white' }}>管理</Button>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <Title level={3} style={{ color: 'white', margin: '12px 0' }}>OFD 转换工具</Title>
+        </Link>
+        <Link to={isAdmin ? '/' : '/admin'}>
+          <Button type="text" icon={<SettingOutlined />} style={{ color: 'white' }}>
+            {isAdmin ? '返回首页' : '管理'}
+          </Button>
         </Link>
       </Header>
       <Content style={{ padding: 24, maxWidth: 1000, margin: '0 auto', width: '100%' }}>
