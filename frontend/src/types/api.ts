@@ -43,3 +43,34 @@ export interface TaskItem {
   error: string | null
   warning: string | null
 }
+
+export interface AdminLogsParams {
+  page?: number
+  size?: number
+  operation_type?: string
+  status?: string
+  start_date?: number
+  end_date?: number
+  search?: string
+}
+
+export interface AdminLogEntry {
+  id: string
+  operation_type: string
+  client_ip: string | null
+  file_id: string | null
+  task_id: string | null
+  target_format: string | null
+  status: string
+  duration_ms: number | null
+  error_message: string | null
+  user_agent: string | null
+  created_at: number
+}
+
+export interface AdminLogsResponse {
+  logs: AdminLogEntry[]
+  total: number
+  page: number
+  size: number
+}
