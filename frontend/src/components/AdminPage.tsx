@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
-  Layout, Table, Select, Input, Button, DatePicker, Space, Typography, message,
+  Table, Select, Input, Button, DatePicker, Space, Typography, message,
 } from 'antd'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
@@ -126,7 +126,7 @@ export function AdminPage() {
 
   if (!authed) {
     return (
-      <Layout style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <div style={{ width: 320, textAlign: 'center' }}>
           <Title level={4}>管理页面登录</Title>
           <Input.Password
@@ -138,7 +138,7 @@ export function AdminPage() {
           />
           <Button type="primary" onClick={handleLogin} block>登录</Button>
         </div>
-      </Layout>
+      </div>
     )
   }
 

@@ -182,9 +182,11 @@ export function App() {
           <Route path="/" element={<ConverterPage />} />
         </Routes>
       </Content>
-      <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-      </Routes>
+      <Content>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
+      </Content>
     </Layout>
   )
 }
