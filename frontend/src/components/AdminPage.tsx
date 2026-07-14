@@ -3,13 +3,9 @@ import {
   Table, Select, Input, Button, DatePicker, Space, Typography, message,
 } from 'antd'
 import dayjs from 'dayjs'
-import 'dayjs/locale/zh-cn'
-import locale from 'antd/locale/zh_CN'
 import { api, clearAdminToken } from '../api/client'
 import type { AdminLogEntry, AdminLogsResponse } from '../types/api'
 import type { ColumnsType } from 'antd/es/table'
-
-dayjs.locale('zh-cn')
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -170,7 +166,6 @@ export function AdminPage() {
         />
         <RangePicker
           showTime
-          locale={locale.DatePicker}
           placeholder={['开始时间', '结束时间']}
           onChange={(dates) => {
             setFilters((f) => ({
