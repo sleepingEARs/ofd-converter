@@ -6,13 +6,11 @@
 
 - OFD -> PDF / PNG / JPG / 文本 / DOCX / Markdown
 - PDF / 图片 -> OFD
-- OFD 文件在线预览（ofd.js 纯前端渲染）
+- OFD 文件在线预览（服务端渲染为 PNG）
 - REST API：上传 / 转换 / 查询 / 下载 / 格式列表 / 健康检查
 - 操作日志（基于 IP）、定时清理、文件保留期可配置、按 IP 限流
+- 管理后台：转换日志查询
 - Docker Compose 一键部署（前后端）
-
-后续计划：
-- Plan 4：MCP 协议端点（AI Agent 调用）
 
 ## 本地开发
 
@@ -124,41 +122,8 @@ JSON 字段使用 snake_case。状态值小写：`pending` / `processing` / `don
 - 磁盘：使用率 ≥ 95% 拒绝新上传
 - 文件类型按魔数校验（非扩展名）
 
-## 设计文档
+## License
 
-- 设计 spec：`docs/superpowers/specs/2026-07-05-ofd-converter-design.md`
-- Plan 2 设计：`docs/superpowers/specs/2026-07-06-ofd-converter-plan-2-design.md`
-- Plan 3 设计：`docs/superpowers/specs/2026-07-06-ofd-converter-plan-3-design.md`
-- Plan 4 设计：`docs/superpowers/specs/2026-07-11-ofd-converter-plan-4-design.md`
-- PoC 发现：`docs/superpowers/pocs/2026-07-05-ofd-converter-poc-findings.md`
-- 实施计划：`docs/superpowers/plans/`（plan-1/2/3/4）
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
-## MCP（AI Agent 调用）
-
-端点 `POST /mcp`（JSON-RPC 2.0 over HTTP）。完整握手流程：
-1. `initialize` -> 获得 `Mcp-Session-Id` 头
-2. `notifications/initialized`（通知，无 id，返回 202）
-3. `tools/list` / `tools/call`（需带 `Mcp-Session-Id` 头）
-
-会话 30 分钟无活动过期。协议版本 `2025-06-18`。
-
-**工具：**
-
-| 工具 | 说明 | 返回 |
-|------|------|------|
-| `upload_file` | base64 上传文件（< 10MB，大文件走 REST） | `{file_id, filename, size, source_type}` |
-| `convert_ofd` | 异步转换，返回 task_id | `{task_id, status, warning?}` |
-| `get_task_status` | 查询任务状态 | `{task_id, status, download_url?, error?, warning?}` |
-| `extract_ofd_text` | 同步提取 OFD 文本，直接返回内容 | `{text}` |
-| `extract_ofd_markdown` | 同步提取 OFD 为 Markdown，直接返回（供 Agent 消费） | `{markdown}` |
-| `list_formats` | 列出支持的转换格式 | `{ofd:[...], pdf:[...], image:[...]}` |
-
-`extract_ofd_*` 同步调用，30 秒超时，Agent 一次调用拿结果（无需轮询）。`convert_ofd` 为异步，用 `get_task_status` 轮询。
-
-**示例（提取 Markdown）：**
-```
-1. POST /mcp  {"method":"initialize"}           -> Mcp-Session-Id: <sid>
-2. POST /mcp  {"method":"notifications/initialized"}  (header: Mcp-Session-Id: <sid>) -> 202
-3. POST /mcp  {"method":"tools/call","params":{"name":"upload_file","arguments":{"filename":"a.ofd","content":"<base64>"}}}  -> file_id
-4. POST /mcp  {"method":"tools/call","params":{"name":"extract_ofd_markdown","arguments":{"file_id":"<id>"}}}  -> {markdown: "..."}
-```
+See [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) for third-party licenses.
