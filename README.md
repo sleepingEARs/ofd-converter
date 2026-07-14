@@ -36,9 +36,21 @@ npm run build    # 构建到 dist/
 
 ## 一键部署（推荐）
 
-仅依赖 Docker，执行：
+仅需一台安装好 Docker 的服务器，即可一键部署。
+
+### 前提条件
+
+- 安装 Docker 20.10+ 和 Docker Compose（v2 插件或 standalone）
+- 开放一个对外访问的端口（默认 `80`）
+
+### 部署步骤
 
 ```bash
+# 1. 克隆仓库
+git clone https://github.com/sleepingEARs/ofd-converter.git
+cd ofd-converter
+
+# 2. 执行一键部署脚本
 ./deploy.sh
 ```
 
@@ -48,15 +60,42 @@ npm run build    # 构建到 dist/
 - **数据目录**：默认 `./data`
 - **管理员口令**：默认随机生成 16 位字符
 
-配置会保存到 `.env` 文件。后续再次运行 `./deploy.sh` 会沿用已有配置，也可重新输入。
+配置会保存到 `.env` 文件。首次构建会下载 Maven 和 npm 依赖，可能需要几分钟。
 
-部署成功后输出访问地址，例如：
+### 访问应用
 
+部署成功后，根据你设置的端口访问：
+
+```text
+前端页面:     http://<服务器IP>:<端口>
+管理后台:     http://<服务器IP>:<端口>/admin
+API 接口:     http://<服务器IP>:<端口>/api/
+健康检查:     http://<服务器IP>:<端口>/health
 ```
-Frontend:     http://localhost
-Admin page:   http://localhost/admin
-API base:     http://localhost/api/
-Health check: http://localhost/health
+
+例如使用默认端口 `80`：
+
+```text
+http://<服务器IP>
+http://<服务器IP>/admin
+```
+
+管理员口令在 `.env` 文件中查看：
+
+```bash
+cat .env
+```
+
+### 防火墙放行
+
+如果服务器启用了防火墙，需要放行对应端口（以 Ubuntu UFW 为例）：
+
+```bash
+# 默认 80 端口
+sudo ufw allow 80/tcp
+
+# 如果部署时使用了自定义端口，例如 8080
+sudo ufw allow 8080/tcp
 ```
 
 ### 更新部署
@@ -64,10 +103,12 @@ Health check: http://localhost/health
 拉取最新代码后，重新执行：
 
 ```bash
+git pull
+cd ofd-converter
 ./deploy.sh
 ```
 
-脚本会自动重新构建镜像并重启容器，数据目录中的数据会保留。
+脚本会自动重新构建镜像并重启容器，`data/` 目录中的数据会保留。
 
 ### 手动修改配置
 
@@ -76,6 +117,16 @@ Health check: http://localhost/health
 ```bash
 docker compose down
 docker compose up -d
+```
+
+### 查看日志
+
+```bash
+# 后端日志
+docker compose logs -f backend
+
+# 前端日志
+docker compose logs -f frontend
 ```
 
 ## 配置（环境变量）
