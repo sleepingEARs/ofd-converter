@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Table, Select, Input, Button, DatePicker, Space, Typography, message,
 } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import zhCN from 'antd/es/locale/zh_CN'
 import dayjs from 'dayjs'
 import zhCn from 'dayjs/locale/zh-cn'
 import { api, clearAdminToken } from '../api/client'
