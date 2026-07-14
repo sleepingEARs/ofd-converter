@@ -150,7 +150,7 @@ function ConverterPage() {
   }, [])
 
   return (
-    <>
+    <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%' }}>
       <UploadZone onUploaded={handleUploaded} />
       <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
         <div style={{ flex: 1 }}>
@@ -164,7 +164,7 @@ function ConverterPage() {
         <ConvertOptions selectedFile={selectedFile} onConvert={handleConvert} converting={converting} checkedCount={checkedIds.size} />
       </div>
       <div style={{ marginTop: 16 }}><TaskList tasks={tasks} onDownload={handleDownload} /></div>
-    </>
+    </div>
   )
 }
 
@@ -184,13 +184,9 @@ export function App() {
           </Button>
         </Link>
       </Header>
-      <Content style={{ padding: 24, maxWidth: 1000, margin: '0 auto', width: '100%' }}>
+      <Content style={{ padding: 24 }}>
         <Routes>
           <Route path="/" element={<ConverterPage />} />
-        </Routes>
-      </Content>
-      <Content>
-        <Routes>
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Content>
