@@ -4,20 +4,15 @@ import com.ofd.converter.model.ErrorCode;
 import com.ofd.converter.model.dto.AdminLogsResponse;
 import com.ofd.converter.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 public class AdminController {
 
     private final LogService logService;
-    private final JdbcTemplate jdbc;
 
-    public AdminController(LogService logService, JdbcTemplate jdbc) {
+    public AdminController(LogService logService) {
         this.logService = logService;
-        this.jdbc = jdbc;
     }
 
     @GetMapping("/api/admin/logs")
@@ -33,14 +28,6 @@ public class AdminController {
         checkAuth(req);
         return logService.queryLogs(page, size, operation_type, status,
             start_date, end_date, search);
-    }
-
-    @GetMapping("/api/admin/debug")
-    public Map<String, Object> debug(HttpServletRequest req) {
-        checkAuth(req);
-        long logCount = jdbc.queryForObject("SELECT COUNT(*) FROM operation_log", Long.class);
-        long taskCount = jdbc.queryForObject("SELECT COUNT(*) FROM task", Long.class);
-        return Map.of("operation_log_count", logCount, "task_count", taskCount);
     }
 
     private void checkAuth(HttpServletRequest req) {

@@ -122,6 +122,10 @@ JSON 字段使用 snake_case。状态值小写：`pending` / `processing` / `don
 - 磁盘：使用率 ≥ 95% 拒绝新上传
 - 文件类型按魔数校验（非扩展名）
 
+## 测试样本声明
+
+`backend/src/test/resources/test-ofd/` 目录下的 OFD 文件来自 [OFDRW](https://github.com/ofdrw/ofdrw) 官方测试集，仅用于功能测试。这些文件为模拟样本，不包含真实个人或企业信息。
+
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).

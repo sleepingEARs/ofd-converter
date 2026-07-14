@@ -22,3 +22,5 @@ package-lock.json
 .env
 data/
 docs/superpowers/
+backend/app.jar
+frontend/package-lock.json
