@@ -1,10 +1,3 @@
-FROM maven:3.9-eclipse-temurin-17 AS build
-WORKDIR /app
-COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
-COPY src ./src
-RUN mvn -B -q package -DskipTests
-
 FROM eclipse-temurin:17-jre
 
 # Install CJK fonts + fontconfig.
@@ -28,7 +21,8 @@ COPY fonts.conf /etc/fonts/conf.d/99-cjk-aliases.conf
 RUN fc-cache -f
 
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+# Use pre-built jar from local Maven build (avoids in-container dependency downloads).
+COPY app.jar app.jar
 ENV JAVA_OPTS="-Xmx768m"
 EXPOSE 8080
 VOLUME ["/data"]

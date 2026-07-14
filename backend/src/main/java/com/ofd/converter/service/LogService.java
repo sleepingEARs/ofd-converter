@@ -38,8 +38,9 @@ public class LogService {
         return entry;
     };
 
-    private static final RowMapper<AdminLogEntry> ADMIN_ROW_MAPPER = (rs, rowNum) ->
-        new AdminLogEntry(
+    private static final RowMapper<AdminLogEntry> ADMIN_ROW_MAPPER = (rs, rowNum) -> {
+        Object dur = rs.getObject("duration_ms");
+        return new AdminLogEntry(
             rs.getString("id"),
             rs.getString("operation_type"),
             rs.getString("client_ip"),
@@ -47,12 +48,13 @@ public class LogService {
             rs.getString("task_id"),
             rs.getString("target_format"),
             rs.getString("status"),
-            (Long) rs.getObject("duration_ms"),
+            dur == null ? null : ((Number) dur).longValue(),
             rs.getString("error_message"),
             rs.getString("user_agent"),
             rs.getLong("created_at"),
             rs.getString("filename")
         );
+    };
 
     public LogService(OperationLogRepository repo, JdbcTemplate jdbc,
                       @Qualifier("logExecutor") ExecutorService logExecutor) {
