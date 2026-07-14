@@ -2,10 +2,14 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Table, Select, Input, Button, DatePicker, Space, Typography, message,
 } from 'antd'
+import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
+import zhCn from 'dayjs/locale/zh-cn'
 import { api, clearAdminToken } from '../api/client'
 import type { AdminLogEntry, AdminLogsResponse } from '../types/api'
 import type { ColumnsType } from 'antd/es/table'
+
+dayjs.locale(zhCn)
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -166,6 +170,7 @@ export function AdminPage() {
         />
         <RangePicker
           showTime
+          locale={zhCN.DatePicker}
           placeholder={['开始时间', '结束时间']}
           onChange={(dates) => {
             setFilters((f) => ({
