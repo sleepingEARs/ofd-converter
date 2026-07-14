@@ -21,3 +21,4 @@ package-lock.json
 # Deployment configuration and local data
 .env
 data/
+docs/superpowers/
