@@ -77,7 +77,7 @@ public class ConvertService {
         } catch (Exception e) {
             throw new ApiException(ErrorCode.INTERNAL_ERROR, "存储失败", 500);
         }
-        logService.record(OperationType.UPLOAD, ip, fileId, null, null, "SUCCESS", 0, null, ua);
+        logService.record(OperationType.UPLOAD, ip, fileId, null, safeName, null, "SUCCESS", 0, null, ua);
         return new UploadResponse(fileId, safeName, file.getSize(), src.name());
     }
 
@@ -101,7 +101,7 @@ public class ConvertService {
 
         Task t = taskService.create(req.fileId(), filename, src, fmt,
             req.options() == null ? null : req.options().toString(), warningFor(fmt));
-        logService.record(OperationType.CONVERT, ip, req.fileId(), t.getId(), fmt.name(), "PENDING", 0, null, ua);
+        logService.record(OperationType.CONVERT, ip, req.fileId(), t.getId(), filename, fmt.name(), "PENDING", 0, null, ua);
 
         // Run async with a per-task timeout. convert() returns immediately.
         // NOTE: ofdrw converters are not interruptible; orTimeout marks the task TIMEOUT but
@@ -114,7 +114,7 @@ public class ConvertService {
             .whenComplete((result, ex) -> {
                 if (ex instanceof TimeoutException) {
                     taskService.markTimeout(t.getId());
-                    logService.record(OperationType.CONVERT, null, fileId, t.getId(),
+                    logService.record(OperationType.CONVERT, null, fileId, t.getId(), filename,
                         fmt.name(), "TIMEOUT", timeoutMinutes * 60_000L, "转换超时", null);
                 } else if (ex != null) {
                     // Safety net: runConversion usually marks failed itself, but if the cause
@@ -128,7 +128,7 @@ public class ConvertService {
                             && !TaskStatus.DONE.name().equals(s)) {
                             String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
                             taskService.markFailed(t.getId(), msg);
-                            logService.record(OperationType.CONVERT, null, fileId, t.getId(),
+                            logService.record(OperationType.CONVERT, null, fileId, t.getId(), filename,
                                 fmt.name(), "FAILED", 0, msg, null);
                         }
                     } catch (Exception ignored) {
@@ -155,7 +155,7 @@ public class ConvertService {
             }
             taskService.markDone(t.getId(), r.outputFile().toString(), r.outputFilename(), r.size(), r.outputType());
             logService.record(OperationType.CONVERT, null, t.getSourceFileId(), t.getId(),
-                fmt.name(), "SUCCESS", System.currentTimeMillis() - start, null, null);
+                t.getSourceFilename(), fmt.name(), "SUCCESS", System.currentTimeMillis() - start, null, null);
         } catch (Throwable e) {
             Task current = taskService.get(t.getId());
             if (TaskStatus.TIMEOUT.name().equals(current.getStatus())) {
@@ -166,7 +166,7 @@ public class ConvertService {
             String message = (e instanceof OutOfMemoryError) ? "内存不足" : e.getMessage();
             taskService.markFailed(t.getId(), message);
             logService.record(OperationType.CONVERT, null, t.getSourceFileId(), t.getId(),
-                fmt.name(), "FAILED", System.currentTimeMillis() - start, message, null);
+                t.getSourceFilename(), fmt.name(), "FAILED", System.currentTimeMillis() - start, message, null);
             try {
                 fileService.deleteRecursively(fileService.createOutputDir(t.getId()));
             } catch (Exception ignored) {

@@ -124,18 +124,18 @@ public class McpController {
             // best-effort: extract file_id/task_id for logging from the tool result.
             String fileId = field(toolResult, "file_id");
             String taskId = field(toolResult, "task_id");
-            logService.record(OperationType.MCP_CALL, ip, fileId, taskId, toolName, "SUCCESS",
+            logService.record(OperationType.MCP_CALL, ip, fileId, taskId, null, toolName, "SUCCESS",
                 System.currentTimeMillis() - start, null, ua);
 
             Map<String, Object> wrapped = new LinkedHashMap<>();
             wrapped.put("content", List.of(Map.of("type", "text", "text", text)));
             return wrapped;
         } catch (McpErrors.McpException e) {
-            logService.record(OperationType.MCP_CALL, ip, null, null, toolName, "FAILED",
+            logService.record(OperationType.MCP_CALL, ip, null, null, null, toolName, "FAILED",
                 System.currentTimeMillis() - start, e.getMessage(), ua);
             throw e;
         } catch (Exception e) {
-            logService.record(OperationType.MCP_CALL, ip, null, null, toolName, "FAILED",
+            logService.record(OperationType.MCP_CALL, ip, null, null, null, toolName, "FAILED",
                 System.currentTimeMillis() - start, e.getMessage(), ua);
             throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, e.getMessage());
         }

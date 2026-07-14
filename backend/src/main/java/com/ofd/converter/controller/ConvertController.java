@@ -95,7 +95,7 @@ public class ConvertController {
             taskService.saveDownloadedAt(t.getId(), System.currentTimeMillis());
         }
         logService.record(OperationType.DOWNLOAD, ClientIpInterceptor.extractIp(req), null,
-            taskId, null, "SUCCESS", 0, null, req.getHeader("User-Agent"));
+            taskId, t.getSourceFilename(), null, "SUCCESS", 0, null, req.getHeader("User-Agent"));
         // RFC 5987: URL-encode filename for non-ASCII (Chinese) chars to avoid
         // Tomcat rejecting the Content-Disposition header.
         String encodedName = java.net.URLEncoder.encode(t.getOutputFilename(), java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");

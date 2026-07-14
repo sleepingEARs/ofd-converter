@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS operation_log (
   client_ip TEXT,
   file_id TEXT,
   task_id TEXT,
+  filename TEXT,
   target_format TEXT,
   status TEXT NOT NULL,
   duration_ms INTEGER,

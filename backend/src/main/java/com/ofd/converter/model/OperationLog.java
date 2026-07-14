@@ -24,6 +24,7 @@ public class OperationLog implements Persistable<String> {
     private String errorMessage;
     private String userAgent;
     private Long createdAt;
+    private String filename;
 
     @Transient
     @Getter(AccessLevel.NONE)

@@ -64,7 +64,7 @@ public class LogService {
     }
 
     public void record(OperationType type, String ip, String fileId, String taskId,
-                       String targetFormat, String status, long durationMs,
+                       String filename, String targetFormat, String status, long durationMs,
                        String error, String userAgent) {
         OperationLog entry = new OperationLog();
         entry.setId(UUID.randomUUID().toString());
@@ -72,6 +72,7 @@ public class LogService {
         entry.setClientIp(ip);
         entry.setFileId(fileId);
         entry.setTaskId(taskId);
+        entry.setFilename(filename);
         entry.setTargetFormat(targetFormat);
         entry.setStatus(status);
         entry.setDurationMs(durationMs);
@@ -81,8 +82,8 @@ public class LogService {
         logExecutor.submit(() -> {
             try {
                 repo.save(entry);
-                log.info("log saved: type={} status={} fileId={} taskId={}",
-                    type.name(), status, fileId, taskId);
+                log.info("log saved: type={} status={} fileId={} taskId={} filename={}",
+                    type.name(), status, fileId, taskId, filename);
             } catch (Exception e) {
                 log.error("log write failed: type={} status={}", type.name(), status, e);
             }
@@ -130,14 +131,15 @@ public class LogService {
         listParams.add(offset);
         List<AdminLogEntry> logs = jdbc.query(
             "SELECT id, operation_type, client_ip, file_id, task_id,"
-                + " target_format, status, duration_ms, error_message,"
-                + " user_agent, created_at, NULL AS filename"
+                + " filename, target_format, status, duration_ms, error_message,"
+                + " user_agent, created_at"
                 + " FROM operation_log WHERE 1=1" + whereClause
                 + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             ADMIN_ROW_MAPPER, listParams.toArray());
 
-        // Batch-fill filenames from task table.
+        // Batch-fill filenames from task table for logs that didn't store one.
         List<String> taskIds = logs.stream()
+            .filter(e -> e.filename() == null || e.filename().isBlank())
             .map(AdminLogEntry::task_id)
             .filter(tid -> tid != null && !tid.isBlank())
             .distinct()
@@ -152,10 +154,16 @@ public class LogService {
                 nameMap.put((String) row.get("id"), (String) row.get("source_filename"));
             }
             logs = logs.stream()
-                .map(e -> new AdminLogEntry(e.id(), e.operation_type(), e.client_ip(),
-                    e.file_id(), e.task_id(), e.target_format(), e.status(),
-                    e.duration_ms(), e.error_message(), e.user_agent(),
-                    e.created_at(), nameMap.get(e.task_id())))
+                .map(e -> {
+                    String name = e.filename();
+                    if (name == null || name.isBlank()) {
+                        name = nameMap.get(e.task_id());
+                    }
+                    return new AdminLogEntry(e.id(), e.operation_type(), e.client_ip(),
+                        e.file_id(), e.task_id(), e.target_format(), e.status(),
+                        e.duration_ms(), e.error_message(), e.user_agent(),
+                        e.created_at(), name);
+                })
                 .toList();
         }
 
