@@ -2,6 +2,7 @@
 backend/target/
 target/
 *.class
+*.jar
 
 # IDE
 .idea/
@@ -11,16 +12,21 @@ target/
 
 # OS
 .DS_Store
+Thumbs.db
 
 # SDD scratch (self-ignoring already, but be explicit)
 .superpowers/sdd/
+
+# Node.js
 node_modules/
 .vite/
-package-lock.json
+**/package-lock.json
 
 # Deployment configuration and local data
 .env
+.env.*
+!.env.example
 data/
+
+# Internal planning docs
 docs/superpowers/
-backend/app.jar
-frontend/package-lock.json
