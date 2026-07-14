@@ -36,16 +36,49 @@ npm run build    # 构建到 dist/
 
 开发时需同时启动后端（`cd backend && mvn spring-boot:run`）。
 
-## Docker 部署（前后端）
+## 一键部署（推荐）
+
+仅依赖 Docker，执行：
 
 ```bash
-docker compose up --build -d
-curl http://localhost/health          # 经 nginx 代理 -> {"status":"ok"}
-# 前端: http://localhost
-# 后端 API: http://localhost/api/...
+./deploy.sh
 ```
 
-> Docker 构建未在开发环境验证（无 Docker）。首次构建会下载依赖，较慢。
+脚本会交互式询问以下配置（均有默认值，可直接回车）：
+
+- **HTTP 端口**：默认 `80`
+- **数据目录**：默认 `./data`
+- **管理员口令**：默认随机生成 16 位字符
+
+配置会保存到 `.env` 文件。后续再次运行 `./deploy.sh` 会沿用已有配置，也可重新输入。
+
+部署成功后输出访问地址，例如：
+
+```
+Frontend:     http://localhost
+Admin page:   http://localhost/admin
+API base:     http://localhost/api/
+Health check: http://localhost/health
+```
+
+### 更新部署
+
+拉取最新代码后，重新执行：
+
+```bash
+./deploy.sh
+```
+
+脚本会自动重新构建镜像并重启容器，数据目录中的数据会保留。
+
+### 手动修改配置
+
+直接编辑 `.env` 文件，然后运行：
+
+```bash
+docker compose down
+docker compose up -d
+```
 
 ## 配置（环境变量）
 

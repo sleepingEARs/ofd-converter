@@ -1,3 +1,16 @@
+# Stage 1: Build the application jar inside Docker.
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+
+# Copy pom.xml first and download dependencies to leverage layer caching.
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source and package.
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+# Stage 2: Runtime image with JRE and fonts.
 FROM eclipse-temurin:17-jre
 
 # Install CJK fonts + fontconfig.
@@ -21,8 +34,7 @@ COPY fonts.conf /etc/fonts/conf.d/99-cjk-aliases.conf
 RUN fc-cache -f
 
 WORKDIR /app
-# Use pre-built jar from local Maven build (avoids in-container dependency downloads).
-COPY app.jar app.jar
+COPY --from=builder /build/target/ofd-converter-backend-0.1.0.jar app.jar
 ENV JAVA_OPTS="-Xmx768m"
 EXPOSE 8080
 VOLUME ["/data"]
