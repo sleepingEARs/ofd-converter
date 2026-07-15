@@ -11,6 +11,8 @@ import com.ofd.converter.mcp.McpToolRegistry;
 import com.ofd.converter.model.OperationType;
 import com.ofd.converter.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +25,7 @@ import java.util.Map;
 @RestController
 public class McpController {
 
+    private static final Logger log = LoggerFactory.getLogger(McpController.class);
     private static final String PROTOCOL_VERSION = "2025-06-18";
 
     private final McpSessionService sessions;
@@ -47,6 +50,10 @@ public class McpController {
             // envelope, not the HTTP status. Consistent with all other error paths.
             return json(new McpJsonRpc.Response("2.0", null, null,
                 new McpJsonRpc.Error(McpErrors.PARSE_ERROR, "解析错误", null)), 200);
+        }
+        if (request == null) {
+            return json(new McpJsonRpc.Response("2.0", null, null,
+                new McpJsonRpc.Error(McpErrors.INVALID_REQUEST, "Invalid Request", null)), 200);
         }
 
         String sid = req.getHeader("Mcp-Session-Id");
@@ -95,8 +102,9 @@ public class McpController {
             return json(new McpJsonRpc.Response("2.0", request.id(), null,
                 new McpJsonRpc.Error(e.code, e.getMessage(), null)), 200);
         } catch (Exception e) {
+            log.error("Unhandled error processing MCP request", e);
             return json(new McpJsonRpc.Response("2.0", request.id(), null,
-                new McpJsonRpc.Error(McpErrors.INTERNAL_ERROR, e.getMessage(), null)), 200);
+                new McpJsonRpc.Error(McpErrors.INTERNAL_ERROR, "Internal error", null)), 200);
         }
     }
 
@@ -135,9 +143,10 @@ public class McpController {
                 System.currentTimeMillis() - start, e.getMessage(), ua);
             throw e;
         } catch (Exception e) {
+            log.error("Unhandled error in MCP tool '{}' call", toolName, e);
             logService.record(OperationType.MCP_CALL, ip, null, null, null, toolName, "FAILED",
                 System.currentTimeMillis() - start, e.getMessage(), ua);
-            throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, e.getMessage());
+            throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, "Internal error");
         }
     }
 

@@ -6,6 +6,9 @@ import com.ofd.converter.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @RestController
 public class AdminController {
 
@@ -37,7 +40,10 @@ public class AdminController {
                 "管理功能未配置（ADMIN_PASSWORD 环境变量未设置）", 503);
         }
         String token = req.getHeader("X-Admin-Token");
-        if (!password.equals(token)) {
+        // Constant-time comparison to prevent timing side-channel on the admin password.
+        if (token == null || !MessageDigest.isEqual(
+                password.getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8))) {
             throw new ApiException(ErrorCode.UNAUTHORIZED, "密码错误", 401);
         }
     }

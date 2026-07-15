@@ -50,6 +50,9 @@ public class UploadFileTool implements McpTool {
         if (filename == null || content == null) {
             throw new McpErrors.McpException(McpErrors.INVALID_PARAMS, "缺少 filename 或 content");
         }
+        // Pre-check size BEFORE decoding: base64 expands data ~4/3, so a multi-GB payload would
+        // OOM during Base64.decode before validateSize ever runs.
+        validation.validateSize((long) content.length() * 3 / 4);
         byte[] bytes;
         try {
             bytes = Base64.getDecoder().decode(content);

@@ -41,11 +41,15 @@ public class ConvertOfdTool implements McpTool {
 
     @Override
     public Object execute(Map<String, Object> args, McpSession session) {
+        String fileId = str(args.get("file_id"));
+        String targetFormat = str(args.get("target_format"));
+        if (fileId == null || targetFormat == null) {
+            throw new McpErrors.McpException(McpErrors.INVALID_PARAMS, "缺少 file_id 或 target_format");
+        }
         @SuppressWarnings("unchecked")
         Map<String, Object> options = (Map<String, Object>) args.get("options");
         ConvertResponse r = convertService.convert(
-            new ConvertRequest(str(args.get("file_id")), str(args.get("target_format")), options),
-            null, null);
+            new ConvertRequest(fileId, targetFormat, options), null, null);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("task_id", r.taskId());
         result.put("status", r.status());
