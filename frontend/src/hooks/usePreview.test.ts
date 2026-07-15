@@ -1,15 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { FileItem } from '../types/api'
 
-// vi.mock is hoisted above imports so usePreview's static ofd.js import gets the mock.
-vi.mock('ofd.js', () => ({
-  parseOfdDocument: (config: { success?: () => void }) => { config.success?.() },
-  getOFDPageCount: () => 2,
-  renderOfdByIndex: (_di: number, pi: number) => {
-    const d = document.createElement('div'); d.textContent = `page-${pi}`; return d
-  },
-}))
+afterEach(() => vi.unstubAllGlobals())
 
 const { usePreview } = await import('./usePreview')
 
@@ -20,6 +13,11 @@ const ofdFile = (name = 'a.ofd'): FileItem => ({
 
 describe('usePreview', () => {
   it('renders pages for an OFD file', async () => {
+    // usePreview fetches /api/preview/{file_id} (server-side render); mock the response.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ pages: [0, 1] }),
+    }))
     const { result } = renderHook(() => usePreview())
     await act(async () => { await result.current.preview(ofdFile()) })
     expect(result.current.pages.length).toBe(2)
