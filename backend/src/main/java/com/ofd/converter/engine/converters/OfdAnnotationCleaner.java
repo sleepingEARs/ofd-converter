@@ -1,6 +1,7 @@
 package com.ofd.converter.engine.converters;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,9 +23,9 @@ public final class OfdAnnotationCleaner {
         "<(?:\\w+:)?Annot\\b[^>]*>(?:(?!(?:\\w+:)?Appearance).)*?</(?:\\w+:)?Annot>",
         Pattern.DOTALL
     );
-    /** Matches a self-closing <Annot .../> (with optional namespace prefix). */
+    /** Matches a self-closing <Annot .../> (with optional namespace prefix); group 2 captures attributes. */
     private static final Pattern ANNOT_SELF_CLOSING = Pattern.compile(
-        "<(?:\\w+:)?Annot\\b[^>]*/>"
+        "<((?:\\w+:)?Annot)([^>]*)/>"
     );
 
     /**
@@ -44,12 +45,12 @@ public final class OfdAnnotationCleaner {
                 if (name.startsWith("Tpls/")) name = "TPLS/" + name.substring(5);
                 zos.putNextEntry(new ZipEntry(name));
                 if (name.endsWith(".xml")) {
-                    String xml = new String(zis.readAllBytes());
+                    String xml = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
                     xml = injectEmptyAppearance(xml);
                     // Also fix Tpls/ -> TPLS/ in XML path references (e.g. in Document.xml,
                     // Page Content.xml: <ofd:Template TemplateID="2" BaseLoc="Tpls/Tpl_0/Content.xml"/>)
                     xml = xml.replace("Tpls/", "TPLS/");
-                    zos.write(xml.getBytes());
+                    zos.write(xml.getBytes(StandardCharsets.UTF_8));
                 } else {
                     zis.transferTo(zos);
                 }
@@ -60,13 +61,16 @@ public final class OfdAnnotationCleaner {
     }
 
     static String injectEmptyAppearance(String xml) {
-        // Self-closing: <ofd:Annot .../> -> <ofd:Annot><ofd:Appearance/></ofd:Annot>
+        // Self-closing: <ofd:Annot .../> -> <ofd:Annot ...><ofd:Appearance/></ofd:Annot>
+        // (preserve the original attributes instead of discarding them)
         Matcher sc = ANNOT_SELF_CLOSING.matcher(xml);
         StringBuffer sb = new StringBuffer();
         while (sc.find()) {
-            String prefix = extractPrefix(sc.group());
+            String openTag = sc.group(1);   // e.g. "ofd:Annot" or "Annot"
+            String attrs = sc.group(2);     // e.g. " ID=\"1\"" or ""
+            String prefix = extractPrefix("<" + openTag);
             sc.appendReplacement(sb, Matcher.quoteReplacement(
-                "<" + prefix + "Annot><" + prefix + "Appearance/></" + prefix + "Annot>"));
+                "<" + openTag + attrs + "><" + prefix + "Appearance/></" + prefix + "Annot>"));
         }
         sc.appendTail(sb);
         xml = sb.toString();

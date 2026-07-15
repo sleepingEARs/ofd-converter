@@ -38,16 +38,21 @@ public class Ofd2Image implements Converter {
 
         Path imgDir = outputDir.resolve("pages");
         Files.createDirectories(imgDir);
-        try (ImageExporter ex = new ImageExporter(cleanedOfd, imgDir, format.name(), ppm)) {
-            ex.export();
+        try {
+            try (ImageExporter ex = new ImageExporter(cleanedOfd, imgDir, format.name(), ppm)) {
+                ex.export();
+            } finally {
+                Files.deleteIfExists(cleanedOfd);
+            }
+            Path zip = fileService.zipDir(imgDir, base + "_images.zip");
+            Path finalZip = outputDir.resolve(base + "_images.zip");
+            if (!zip.equals(finalZip)) {
+                Files.move(zip, finalZip, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return new ConvertResult(finalZip, base + "_images.zip", Files.size(finalZip), "archive");
         } finally {
-            Files.deleteIfExists(cleanedOfd);
+            // PNGs are now in the zip; remove the intermediate pages directory.
+            try { fileService.deleteRecursively(imgDir); } catch (Exception ignored) {}
         }
-        Path zip = fileService.zipDir(imgDir, base + "_images.zip");
-        Path finalZip = outputDir.resolve(base + "_images.zip");
-        if (!zip.equals(finalZip)) {
-            Files.move(zip, finalZip, StandardCopyOption.REPLACE_EXISTING);
-        }
-        return new ConvertResult(finalZip, base + "_images.zip", Files.size(finalZip), "archive");
     }
 }

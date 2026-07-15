@@ -47,7 +47,7 @@ public class Ofd2Docx implements Converter {
                 switch (e.getType()) {
                     case HEADING -> {
                         XWPFParagraph p = doc.createParagraph();
-                        p.setStyle("Heading" + Math.min(e.getLevel(), 3));
+                        p.setStyle("Heading" + Math.min(Math.max(e.getLevel(), 1), 3));
                         XWPFRun run = p.createRun();
                         run.setText(e.getText());
                         if (e.getFontSize() != null) applyFontSize(run, e.getFontSize());
@@ -66,13 +66,17 @@ public class Ofd2Docx implements Converter {
                     }
                     case TABLE -> {
                         if (e.getTableRows() != null && !e.getTableRows().isEmpty()) {
-                            int cols = e.getTableRows().get(0).size();
-                            XWPFTable table = doc.createTable(e.getTableRows().size(), cols);
-                            for (int r = 0; r < e.getTableRows().size(); r++) {
-                                List<String> cells = e.getTableRows().get(r);
-                                for (int c = 0; c < cols; c++) {
-                                    String cell = c < cells.size() ? cells.get(c) : "";
-                                    table.getRow(r).getCell(c).setText(cell);
+                            // Use the max column count across rows so merged/sparse rows don't
+                            // truncate cells or index out of bounds.
+                            int cols = e.getTableRows().stream().mapToInt(List::size).max().orElse(0);
+                            if (cols > 0) {
+                                XWPFTable table = doc.createTable(e.getTableRows().size(), cols);
+                                for (int r = 0; r < e.getTableRows().size(); r++) {
+                                    List<String> cells = e.getTableRows().get(r);
+                                    for (int c = 0; c < cols; c++) {
+                                        String cell = c < cells.size() ? cells.get(c) : "";
+                                        table.getRow(r).getCell(c).setText(cell);
+                                    }
                                 }
                             }
                         }

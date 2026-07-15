@@ -69,7 +69,7 @@ public class Ofd2Markdown implements Converter {
         for (int r = 0; r < rows.size(); r++) {
             md.append("| ");
             for (int c = 0; c < maxCols; c++) {
-                String cell = c < rows.get(r).size() ? rows.get(r).get(c) : "";
+                String cell = c < rows.get(r).size() ? escapeCell(rows.get(r).get(c)) : "";
                 md.append(cell).append(" | ");
             }
             md.append("\n");
@@ -80,5 +80,11 @@ public class Ofd2Markdown implements Converter {
             }
         }
         md.append("\n");
+    }
+
+    /** Escape a table cell: pipes break Markdown columns, newlines break rows. */
+    private static String escapeCell(String s) {
+        if (s == null) return "";
+        return s.replace("|", "\\|").replace("\r", "").replace("\n", " ");
     }
 }

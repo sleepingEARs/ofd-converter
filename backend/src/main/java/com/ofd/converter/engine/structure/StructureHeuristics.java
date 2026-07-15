@@ -19,7 +19,8 @@ public final class StructureHeuristics {
         Map<Double, Integer> freq = new HashMap<>();
         for (TextBlock b : blocks) {
             if (b.fontSize() != null) {
-                freq.merge(b.fontSize(), 1, Integer::sum);
+                double rounded = Math.round(b.fontSize() * 10.0) / 10.0;
+                freq.merge(rounded, 1, Integer::sum);
             }
         }
         if (freq.isEmpty()) return 2.5;
@@ -115,15 +116,18 @@ public final class StructureHeuristics {
 
     /** Two rows align as columns if >=2 of row b's X positions are within 5mm of row a's. */
     private static boolean xColumnsAlign(List<TextBlock> a, List<TextBlock> b) {
-        int aligned = 0;
+        // Count DISTINCT columns of `a` that align with some block in `b`. Without tracking
+        // matched `a` indices, multiple `b` blocks near the same `a` column would each count,
+        // causing false-positive table detection.
+        Set<Integer> matchedA = new HashSet<>();
         for (TextBlock bi : b) {
-            for (TextBlock ai : a) {
-                if (Math.abs(ai.x() - bi.x()) <= 5.0) {
-                    aligned++;
+            for (int ai = 0; ai < a.size(); ai++) {
+                if (!matchedA.contains(ai) && Math.abs(a.get(ai).x() - bi.x()) <= 5.0) {
+                    matchedA.add(ai);
                     break;
                 }
             }
         }
-        return aligned >= 2;
+        return matchedA.size() >= 2;
     }
 }
