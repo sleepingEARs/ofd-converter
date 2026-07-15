@@ -34,6 +34,3 @@ docs/superpowers/
 
 # Graphify output
 graphify-out/
-
-# Code review 产出（报告/修复总结/笔记，本地保留，不提交）
-code-review/
