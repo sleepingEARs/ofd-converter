@@ -34,13 +34,28 @@ if ! docker info &>/dev/null; then
   exit 1
 fi
 
+if ! command -v curl &>/dev/null; then
+  log_error "curl is not installed. Please install curl (required for the backend health check)."
+  exit 1
+fi
+
 log_info "Using Docker Compose command: ${COMPOSE_CMD}"
 
 # --- Generate or load .env ---
 if [[ -f "${ENV_FILE}" ]]; then
   log_info "Loading existing configuration from ${ENV_FILE}"
-  # shellcheck source=/dev/null
-  source "${ENV_FILE}"
+  # Parse .env as key=value lines only. Never `source` it: a malicious or
+  # hand-edited value like ADMIN_PASSWORD=$(rm -rf /) would execute as shell code.
+  while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    case "$key" in
+      PORT|DATA_DIR|ADMIN_PASSWORD)
+        # Strip surrounding double quotes (added when writing the file below).
+        value="${value#\"}"; value="${value%\"}"
+        export "$key=$value"
+        ;;
+    esac
+  done < "${ENV_FILE}"
 fi
 
 # Default values.
@@ -48,10 +63,18 @@ DEFAULT_PORT="${PORT:-80}"
 DEFAULT_DATA_DIR="${DATA_DIR:-${PROJECT_DIR}/data}"
 DEFAULT_ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
-# Non-interactive mode: if all required vars are already set, skip prompts.
-NON_INTERACTIVE=false
-if [[ -n "${PORT:-}" && -n "${DATA_DIR:-}" && -n "${ADMIN_PASSWORD:-}" ]]; then
+# Non-interactive mode: opt in explicitly with NON_INTERACTIVE=1 (or =true).
+# Avoids silently skipping prompts when PORT/DATA_DIR/ADMIN_PASSWORD happen to
+# be set in the caller's shell from an unrelated project. Requires all three.
+NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+if [[ "${NON_INTERACTIVE}" == "1" || "${NON_INTERACTIVE}" == "true" ]]; then
+  if [[ -z "${PORT:-}" || -z "${DATA_DIR:-}" || -z "${ADMIN_PASSWORD:-}" ]]; then
+    log_error "NON_INTERACTIVE mode requires PORT, DATA_DIR, and ADMIN_PASSWORD to be set."
+    exit 1
+  fi
   NON_INTERACTIVE=true
+else
+  NON_INTERACTIVE=false
 fi
 
 # Helper to prompt with default.
@@ -74,7 +97,7 @@ generate_password() {
 
 if [[ -z "${DEFAULT_ADMIN_PASSWORD}" ]]; then
   DEFAULT_ADMIN_PASSWORD="$(generate_password)"
-  log_warn "Generated random admin password: ${DEFAULT_ADMIN_PASSWORD}"
+  log_warn "Generated a random admin password (saved to ${ENV_FILE}; view with: cat ${ENV_FILE})."
 fi
 
 if [[ "${NON_INTERACTIVE}" == "true" ]]; then
@@ -84,19 +107,23 @@ else
   echo "Please configure the deployment (press Enter to accept defaults):"
   PORT="$(prompt_with_default "HTTP port" "${DEFAULT_PORT}")"
   DATA_DIR="$(prompt_with_default "Host data directory" "${DEFAULT_DATA_DIR}")"
-  ADMIN_PASSWORD="$(prompt_with_default "Admin password" "${DEFAULT_ADMIN_PASSWORD}")"
+  read -rsp "Admin password (Enter to use generated/existing): " ADMIN_PASSWORD
+  echo ""
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD}}"
 fi
 
 # Convert DATA_DIR to absolute path.
 mkdir -p "${DATA_DIR}"
 DATA_DIR="$(cd "${DATA_DIR}" && pwd)"
 
-# Write .env.
+# Write .env. Quote values (guard against shell-special characters in the
+# password) and restrict permissions: the file holds the admin password.
 cat > "${ENV_FILE}" <<EOF
-PORT=${PORT}
-DATA_DIR=${DATA_DIR}
-ADMIN_PASSWORD=${ADMIN_PASSWORD}
+PORT="${PORT}"
+DATA_DIR="${DATA_DIR}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD}"
 EOF
+chmod 600 "${ENV_FILE}"
 
 log_info "Configuration saved to ${ENV_FILE}"
 
@@ -135,7 +162,7 @@ echo "  Admin page:   http://localhost:${PORT}/admin"
 echo "  API base:     http://localhost:${PORT}/api/"
 echo "  Health check: http://localhost:${PORT}/health"
 echo ""
-echo "  Admin password: ${ADMIN_PASSWORD}"
+echo "  Admin password: (saved to ${ENV_FILE}; view with: cat ${ENV_FILE})"
 echo "  Data directory: ${DATA_DIR}"
 echo ""
 echo "  View logs:"
