@@ -35,8 +35,5 @@ docs/superpowers/
 # Graphify output
 graphify-out/
 
-# Open-code-review output
-ocr-review-output.txt
-
-# 本地文档，不提交
-code-review-fixes.md
+# Code review 产出（报告/修复总结/笔记，本地保留，不提交）
+code-review/
