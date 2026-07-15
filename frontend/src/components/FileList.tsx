@@ -23,6 +23,7 @@ export function FileList({ files, selectedFileId, onSelect, onDelete, checkedIds
   return (
     <List
       bordered
+      rowKey="file_id"
       dataSource={files}
       locale={{ emptyText: '暂无文件' }}
       style={{ height: 842, overflow: 'auto' }}

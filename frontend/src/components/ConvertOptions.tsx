@@ -25,6 +25,11 @@ export function ConvertOptions({ selectedFile, onConvert, converting, checkedCou
     api.formats().then(setFormats).catch(() => {})
   }, [])
 
+  // Reset the selected format when the source file changes (a new file may not support it).
+  useEffect(() => {
+    setTarget(null)
+  }, [selectedFile])
+
   const available = selectedFile ? formats[selectedFile.source_type.toLowerCase()] ?? [] : []
   const isBatch = checkedCount > 0
   const buttonLabel = isBatch

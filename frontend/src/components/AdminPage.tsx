@@ -90,7 +90,10 @@ export function AdminPage() {
     if (authed) {
       fetchLogs(1, 20)
     }
-  }, [authed, fetchLogs])
+    // fetchLogs depends on `filters`; only auto-fetch on auth change, not on every filter
+    // edit (the 查询 button triggers those). See handleSearch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed])
 
   const handleLogin = async () => {
     if (!password) return

@@ -80,11 +80,17 @@ function ConverterPage() {
         message.warning('所选文件包含不同源格式，批量转换可能产生不一致结果。建议按源格式分组转换。')
       }
       message.loading({ content: `正在批量转换 ${checkedFiles.length} 个文件...`, key: 'batch', duration: 0 })
+      const results = await Promise.allSettled(
+        checkedFiles.map((f) => convert(f.file_id, f.filename, targetFormat))
+      )
       const taskIds: string[] = []
-      for (const f of checkedFiles) {
-        const task = await convert(f.file_id, f.filename, targetFormat)
-        if (task) { taskIds.push(task.task_id); setTasks((prev) => [task, ...prev]) }
-      }
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value) {
+          const task = r.value
+          taskIds.push(task.task_id)
+          setTasks((prev) => [task, ...prev])
+        }
+      })
       const maxWait = 300
       for (let i = 0; i < maxWait; i++) {
         const statuses = await Promise.all(taskIds.map(async (tid) => {

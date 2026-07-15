@@ -11,6 +11,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => null)
     throw new Error(body?.error?.message ?? '请求失败')
   }
+  if (res.status === 204) return undefined as unknown as T
   return res.json()
 }
 

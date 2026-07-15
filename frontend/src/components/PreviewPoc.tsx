@@ -21,9 +21,11 @@ export function PreviewPoc() {
       success: () => {
         const count = getOFDPageCount(0)
         setPageCount(count)
+        const container = containerRef.current
+        if (!container) return
         for (let i = 0; i < count; i++) {
           const node = renderOfdByIndex(0, i, 96)
-          containerRef.current!.appendChild(node)
+          container.appendChild(node)
         }
       },
       fail: (err) => {
