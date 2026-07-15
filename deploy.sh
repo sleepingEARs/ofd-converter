@@ -69,7 +69,7 @@ prompt_with_default() {
 
 # Generate random password if no default.
 generate_password() {
-  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16
+  tr -dc 'A-Za-z0-9' </dev/urandom | dd bs=16 count=1 2>/dev/null
 }
 
 if [[ -z "${DEFAULT_ADMIN_PASSWORD}" ]]; then

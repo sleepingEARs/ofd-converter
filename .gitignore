@@ -30,3 +30,9 @@ data/
 
 # Internal planning docs
 docs/superpowers/
+
+# Graphify output
+graphify-out/
+
+# Open-code-review output
+ocr-review-output.txt
