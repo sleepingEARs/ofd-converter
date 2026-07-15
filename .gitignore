@@ -21,6 +21,7 @@ Thumbs.db
 node_modules/
 .vite/
 **/package-lock.json
+!frontend/package-lock.json
 
 # Deployment configuration and local data
 .env
