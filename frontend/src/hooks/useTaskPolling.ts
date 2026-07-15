@@ -13,13 +13,19 @@ export function useTaskPolling(tasks: TaskItem[], onUpdate: (task: TaskItem) => 
 
   // Dependency key = sorted non-terminal task IDs. Drives effect restart when the
   // set of in-flight tasks changes; the effect body reads tasksRef.current for fresh data.
-  const pendingKey = tasks.filter((t) => !TERMINAL.has(t.status)).map((t) => t.task_id).join(',')
+  const pendingKey = tasks
+    .filter((t) => !TERMINAL.has(t.status))
+    .map((t) => t.task_id)
+    .sort()
+    .join(',')
 
   useEffect(() => {
     if (!pendingKey) return
     let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
 
     async function tick() {
+      if (cancelled) return
       const current = tasksRef.current
       for (const t of current) {
         if (cancelled) return
@@ -33,10 +39,16 @@ export function useTaskPolling(tasks: TaskItem[], onUpdate: (task: TaskItem) => 
           // swallow; next tick retries
         }
       }
+      // Schedule the next tick only after this one finishes, so polls never overlap.
+      if (!cancelled) {
+        timer = setTimeout(() => { void tick() }, POLL_INTERVAL)
+      }
     }
 
     void tick()
-    const id = setInterval(() => { void tick() }, POLL_INTERVAL)
-    return () => { cancelled = true; clearInterval(id) }
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [pendingKey])
 }

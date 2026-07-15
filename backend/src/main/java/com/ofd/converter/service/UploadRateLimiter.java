@@ -17,6 +17,12 @@ public class UploadRateLimiter {
 
     public void check(String ip) {
         if (ip == null || ip.isBlank()) return;
+        // Bound memory: if many distinct IPs have accumulated, evict expired windows so the
+        // map cannot grow unbounded under a rotating-IP attack.
+        if (counters.size() > 10_000) {
+            long cutoff = System.currentTimeMillis() - 60_000L;
+            counters.entrySet().removeIf(e -> e.getValue().windowStart < cutoff);
+        }
         Window w = counters.computeIfAbsent(ip, k -> new Window());
         synchronized (w) {
             long now = System.currentTimeMillis();

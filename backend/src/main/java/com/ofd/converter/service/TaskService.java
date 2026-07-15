@@ -36,16 +36,23 @@ public class TaskService {
             .orElseThrow(() -> new ApiException(ErrorCode.TASK_NOT_FOUND, "任务不存在", 404));
     }
 
-    public void markProcessing(String taskId) {
-        updateStatus(taskId, TaskStatus.PROCESSING);
+    private static final java.util.Set<String> TERMINAL =
+        java.util.Set.of(TaskStatus.DONE.name(), TaskStatus.FAILED.name(), TaskStatus.TIMEOUT.name());
+
+    public synchronized void markProcessing(String taskId) {
+        updateStatus(taskId, TaskStatus.PROCESSING, TERMINAL);
     }
 
-    public void markTimeout(String taskId) {
-        updateStatus(taskId, TaskStatus.TIMEOUT);
+    public synchronized void markTimeout(String taskId) {
+        // TIMEOUT must not overwrite DONE (conversion finished right as the timeout fired).
+        updateStatus(taskId, TaskStatus.TIMEOUT,
+            java.util.Set.of(TaskStatus.DONE.name(), TaskStatus.TIMEOUT.name()));
     }
 
-    public void markDone(String taskId, String outputPath, String outputFilename, Long size, String outputType) {
+    public synchronized void markDone(String taskId, String outputPath, String outputFilename, Long size, String outputType) {
         Task t = get(taskId);
+        // Don't clobber a terminal status set by a concurrent handler (e.g. TIMEOUT).
+        if (TERMINAL.contains(t.getStatus()) && !TaskStatus.DONE.name().equals(t.getStatus())) return;
         t.setStatus(TaskStatus.DONE.name());
         t.setOutputPath(outputPath);
         t.setOutputFilename(outputFilename);
@@ -55,8 +62,10 @@ public class TaskService {
         repo.save(t);
     }
 
-    public void markFailed(String taskId, String error) {
+    public synchronized void markFailed(String taskId, String error) {
         Task t = get(taskId);
+        // Don't overwrite DONE/TIMEOUT with FAILED.
+        if (TaskStatus.DONE.name().equals(t.getStatus()) || TaskStatus.TIMEOUT.name().equals(t.getStatus())) return;
         t.setStatus(TaskStatus.FAILED.name());
         t.setErrorMessage(error);
         t.setUpdatedAt(System.currentTimeMillis());
@@ -70,8 +79,9 @@ public class TaskService {
         repo.save(t);
     }
 
-    private void updateStatus(String taskId, TaskStatus s) {
+    private void updateStatus(String taskId, TaskStatus s, java.util.Set<String> doNotOverride) {
         Task t = get(taskId);
+        if (doNotOverride.contains(t.getStatus())) return;
         t.setStatus(s.name());
         t.setUpdatedAt(System.currentTimeMillis());
         repo.save(t);

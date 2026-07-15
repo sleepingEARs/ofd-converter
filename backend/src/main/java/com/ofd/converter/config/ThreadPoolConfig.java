@@ -14,8 +14,9 @@ public class ThreadPoolConfig {
 
     public ThreadPoolConfig() {
         this.conversionExecutor = new ThreadPoolExecutor(
-            4, 4, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
-            r -> { Thread t = new Thread(r, "ofd-converter"); t.setDaemon(true); return t; });
+            4, 4, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(100),
+            r -> { Thread t = new Thread(r, "ofd-converter"); t.setDaemon(true); return t; },
+            new ThreadPoolExecutor.AbortPolicy());
         this.logExecutor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "ofd-log-writer"); t.setDaemon(true); return t;
         });
