@@ -37,3 +37,6 @@ graphify-out/
 
 # Open-code-review output
 ocr-review-output.txt
+
+# 本地文档，不提交
+code-review-fixes.md
