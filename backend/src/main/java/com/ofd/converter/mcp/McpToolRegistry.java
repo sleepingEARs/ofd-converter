@@ -9,6 +9,7 @@ import java.util.Map;
 @Component
 public class McpToolRegistry {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(McpToolRegistry.class);
     private final Map<String, McpTool> tools = new LinkedHashMap<>();
 
     public McpToolRegistry(List<McpTool> all) {
@@ -38,7 +39,8 @@ public class McpToolRegistry {
             throw e;
         } catch (Exception e) {
             if (e.getCause() instanceof McpErrors.McpException m) throw m;
-            throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, e.getMessage());
+            log.error("Tool '{}' threw unhandled exception", name, e);
+            throw new McpErrors.McpException(McpErrors.INTERNAL_ERROR, "Internal error", e);
         }
     }
 }

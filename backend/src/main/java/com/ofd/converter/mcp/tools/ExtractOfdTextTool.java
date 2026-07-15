@@ -62,10 +62,12 @@ public class ExtractOfdTextTool implements McpTool {
         }
         var source = fileService.uploadFile(fileId);
         var outDir = fileService.createOutputDir("mcp-text-" + fileId);
+        java.util.Map<String, Object> opts = new java.util.HashMap<>();
+        if (args.get("pages") instanceof String p && !p.isBlank()) opts.put("pages", p);
         try {
             ConvertResult r = CompletableFuture
                 .supplyAsync(() -> pipeline.run(SourceType.OFD, ConvertFormat.TXT, source, outDir,
-                    source.getFileName().toString(), ConvertOptions.from(null)))
+                    source.getFileName().toString(), ConvertOptions.from(opts)))
                 .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .join();
             String text = Files.readString(r.outputFile());

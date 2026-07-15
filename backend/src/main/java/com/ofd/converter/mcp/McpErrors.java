@@ -17,5 +17,9 @@ public final class McpErrors {
             super(message);
             this.code = code;
         }
+        public McpException(int code, String message, Throwable cause) {
+            super(message, cause);
+            this.code = code;
+        }
     }
 }
