@@ -6,16 +6,14 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('useConvert', () => {
   it('returns a TaskItem on success', async () => {
-    let call = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
-      call++
-      return Promise.resolve({
-        ok: true,
-        json: async () =>
-          call === 1
-            ? { task_id: 't1', status: 'pending' }
-            : { task_id: 't1', status: 'pending', download_url: null, error: null, warning: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考' },
-      })
+    // convert() response carries the warning directly; no second /api/task fetch.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        task_id: 't1',
+        status: 'pending',
+        warning: 'OFD 转 Markdown 为结构推断，复杂版面可能有损，仅供参考',
+      }),
     }))
     const { result } = renderHook(() => useConvert())
     let task: Awaited<ReturnType<typeof result.current.convert>>

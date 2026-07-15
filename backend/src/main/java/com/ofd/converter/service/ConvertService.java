@@ -62,21 +62,25 @@ public class ConvertService {
         if (!fileService.diskOk()) {
             throw new ApiException(ErrorCode.STORAGE_FULL, "磁盘空间不足", 503);
         }
-        byte[] head;
-        try {
-            head = file.getInputStream().readNBytes(8);
-        } catch (Exception e) {
-            throw new ApiException(ErrorCode.INVALID_REQUEST, "读取文件失败", 400);
-        }
         String originalName = file.getOriginalFilename();
-        SourceType src = validation.detect(head, originalName);
         String safeName = validation.sanitizeFilename(originalName);
         String fileId = UUID.randomUUID().toString();
+        // Store the upload first (consuming the multipart stream once), then read the header
+        // bytes from the stored file. Calling file.getInputStream() twice can return an
+        // already-consumed stream depending on the MultipartFile implementation, corrupting
+        // the stored file; reading the header from disk removes that implementation dependency.
         try {
             fileService.storeUpload(file.getInputStream(), fileId, safeName);
         } catch (Exception e) {
             throw new ApiException(ErrorCode.INTERNAL_ERROR, "存储失败", 500);
         }
+        byte[] head;
+        try (var is = Files.newInputStream(fileService.uploadFile(fileId))) {
+            head = is.readNBytes(8);
+        } catch (Exception e) {
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "读取文件失败", 400);
+        }
+        SourceType src = validation.detect(head, originalName);
         logService.record(OperationType.UPLOAD, ip, fileId, null, safeName, null, "SUCCESS", 0, null, ua);
         return new UploadResponse(fileId, safeName, file.getSize(), src.name());
     }
@@ -99,8 +103,9 @@ public class ConvertService {
             throw new ApiException(ErrorCode.INVALID_REQUEST, "目标格式不支持", 400);
         }
 
+        String warning = warningFor(fmt);
         Task t = taskService.create(req.fileId(), filename, src, fmt,
-            req.options() == null ? null : req.options().toString(), warningFor(fmt));
+            req.options() == null ? null : req.options().toString(), warning);
         logService.record(OperationType.CONVERT, ip, req.fileId(), t.getId(), filename, fmt.name(), "PENDING", 0, null, ua);
 
         // Run async with a per-task timeout. convert() returns immediately.
@@ -137,7 +142,7 @@ public class ConvertService {
                 // success handled inside runConversion
             });
 
-        return new ConvertResponse(t.getId(), t.getStatus().toLowerCase());
+        return new ConvertResponse(t.getId(), t.getStatus().toLowerCase(), warning);
     }
 
     private void runConversion(Task t, SourceType src, ConvertFormat fmt, Map<String, Object> options) {

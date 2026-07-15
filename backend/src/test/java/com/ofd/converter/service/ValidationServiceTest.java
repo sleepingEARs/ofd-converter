@@ -56,4 +56,16 @@ class ValidationServiceTest {
         assertEquals("a.ofd", v.sanitizeFilename("../../a.ofd"));
         assertEquals("a.ofd", v.sanitizeFilename("a.ofd "));
     }
+
+    @Test
+    void rejectsDotAndDotDotAsFilename() {
+        // Bare "." / ".." would resolve to self/parent dir -> path traversal.
+        assertEquals("file", v.sanitizeFilename(".."));
+        assertEquals("file", v.sanitizeFilename("."));
+        assertEquals("file", v.sanitizeFilename("..."));
+        assertEquals("file", v.sanitizeFilename("../"));
+        assertEquals("file", v.sanitizeFilename(null));
+        // Leading-dot names are stripped, not rejected outright.
+        assertEquals("hidden", v.sanitizeFilename(".hidden"));
+    }
 }

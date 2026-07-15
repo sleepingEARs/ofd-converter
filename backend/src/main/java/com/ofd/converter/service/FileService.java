@@ -23,6 +23,10 @@ public class FileService {
         String normalized = filename.replace("\\", "/");
         String safe = normalized.substring(normalized.lastIndexOf('/') + 1)
                 .replaceAll("[\\\\/]", "").replaceAll("\\p{Cntrl}", "").trim();
+        // Strip leading dots to reject ".", "..", ".hidden" (defense against path traversal).
+        while (safe.startsWith(".")) {
+            safe = safe.substring(1);
+        }
         Path target = dir.resolve(safe.isBlank() ? "file" : safe);
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         return target;

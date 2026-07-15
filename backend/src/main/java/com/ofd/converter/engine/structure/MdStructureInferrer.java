@@ -4,8 +4,10 @@ import com.ofd.converter.engine.extract.TextBlock;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -20,22 +22,33 @@ public class MdStructureInferrer {
         double body = StructureHeuristics.bodyFontSize(blocks);
 
         List<List<List<TextBlock>>> tables = StructureHeuristics.detectTables(blocks);
+        // Map each table to its first cell so the table is emitted at its original document
+        // position (where that first cell appears), rather than dumping all tables up front
+        // and destroying document ordering.
+        Map<TextBlock, List<List<TextBlock>>> tableByFirstCell = new HashMap<>();
         Set<TextBlock> consumed = new HashSet<>();
-        List<StructureElement> elements = new ArrayList<>();
         for (List<List<TextBlock>> table : tables) {
-            List<List<String>> rows = new ArrayList<>();
+            tableByFirstCell.put(table.get(0).get(0), table);
             for (List<TextBlock> row : table) {
-                List<String> cells = new ArrayList<>();
-                for (TextBlock cell : row) {
-                    cells.add(cell.text());
-                    consumed.add(cell);
-                }
-                rows.add(cells);
+                consumed.addAll(row);
             }
-            elements.add(StructureElement.table(rows));
         }
 
+        List<StructureElement> elements = new ArrayList<>();
         for (TextBlock b : blocks) {
+            List<List<TextBlock>> table = tableByFirstCell.get(b);
+            if (table != null) {
+                List<List<String>> rows = new ArrayList<>();
+                for (List<TextBlock> row : table) {
+                    List<String> cells = new ArrayList<>();
+                    for (TextBlock cell : row) {
+                        cells.add(cell.text());
+                    }
+                    rows.add(cells);
+                }
+                elements.add(StructureElement.table(rows));
+                continue;
+            }
             if (consumed.contains(b)) continue;
             int level = (b.fontSize() == null) ? 0 : StructureHeuristics.headingLevel(b.fontSize(), body);
             if (level > 0) {

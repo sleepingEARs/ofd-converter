@@ -49,4 +49,24 @@ class OfdStructureInferrerTest {
         assertEquals(1, elements.size());
         assertEquals(StructureType.PARAGRAPH, elements.get(0).getType());
     }
+
+    @Test
+    void preservesDocumentOrderAroundTable() {
+        // Source order: paragraph A, table (2x2), paragraph B.
+        // Must NOT collapse to: table, paragraph A, paragraph B (the old bug).
+        List<TextBlock> blocks = List.of(
+            new TextBlock(0, 0, 0, 50, 6, 2.5, null, "段落A"),
+            new TextBlock(0, 10, 20, 20, 5, 2.5, null, "表1a"),
+            new TextBlock(0, 50, 20, 20, 5, 2.5, null, "表1b"),
+            new TextBlock(0, 10, 40, 20, 5, 2.5, null, "表2a"),
+            new TextBlock(0, 50, 40, 20, 5, 2.5, null, "表2b"),
+            new TextBlock(0, 0, 60, 50, 6, 2.5, null, "段落B"));
+        List<StructureElement> elements = inferrer.infer(blocks);
+        assertEquals(3, elements.size(), "paragraph + table + paragraph");
+        assertEquals(StructureType.PARAGRAPH, elements.get(0).getType());
+        assertEquals("段落A", elements.get(0).getText());
+        assertEquals(StructureType.TABLE, elements.get(1).getType());
+        assertEquals(StructureType.PARAGRAPH, elements.get(2).getType());
+        assertEquals("段落B", elements.get(2).getText());
+    }
 }

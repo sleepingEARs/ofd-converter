@@ -16,6 +16,7 @@ export interface ConvertRequest {
 export interface ConvertResponse {
   task_id: string
   status: 'pending' | 'processing' | 'done' | 'failed' | 'timeout'
+  warning: string | null
 }
 
 export interface TaskResponse {

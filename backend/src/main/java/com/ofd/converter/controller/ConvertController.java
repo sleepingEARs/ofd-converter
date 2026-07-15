@@ -135,7 +135,13 @@ public class ConvertController {
                     var entry = zis.getNextEntry();
                     while (entry != null) {
                         if (entry.getName().endsWith(".png")) {
-                            Path p = outDir.resolve(entry.getName());
+                            Path p = outDir.resolve(entry.getName()).normalize();
+                            // Defense against Zip Slip: reject entries whose resolved path
+                            // escapes outDir (e.g. "../../etc/passwd"). The ZIP is produced by
+                            // the backend here, but validate defensively regardless.
+                            if (!p.startsWith(outDir)) {
+                                throw new ApiException(com.ofd.converter.model.ErrorCode.INVALID_REQUEST, "非法ZIP条目", 400);
+                            }
                             Files.copy(zis, p, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                             pngs.add(p);
                         }

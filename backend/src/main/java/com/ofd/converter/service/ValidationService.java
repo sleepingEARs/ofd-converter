@@ -33,6 +33,11 @@ public class ValidationService {
         String normalized = name == null ? "file" : name.replace("\\", "/");
         String base = normalized.substring(normalized.lastIndexOf('/') + 1);
         base = base.replaceAll("[\\\\/]", "").replaceAll("\\p{Cntrl}", "").trim();
+        // Strip leading dots so ".", "..", ".hidden" etc. cannot resolve to a parent/self
+        // directory (path traversal). A bare ".." would otherwise navigate above the upload dir.
+        while (base.startsWith(".")) {
+            base = base.substring(1);
+        }
         return base.isBlank() ? "file" : base;
     }
 
