@@ -125,6 +125,9 @@ public class LogService {
             "SELECT COUNT(*) FROM operation_log WHERE 1=1" + whereClause,
             Long.class, params.toArray());
 
+        if (page < 1) page = 1;
+        if (size < 1) size = 20;
+        if (size > 500) size = 500;
         int offset = (page - 1) * size;
         List<Object> listParams = new ArrayList<>(params);
         listParams.add(size);

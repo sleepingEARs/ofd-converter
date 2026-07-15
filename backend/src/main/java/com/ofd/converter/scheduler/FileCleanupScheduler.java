@@ -1,6 +1,8 @@
 package com.ofd.converter.scheduler;
 
 import com.ofd.converter.config.RetentionProperties;
+import com.ofd.converter.model.Task;
+import com.ofd.converter.model.TaskStatus;
 import com.ofd.converter.repository.TaskRepository;
 import com.ofd.converter.service.FileService;
 import org.slf4j.Logger;
@@ -39,6 +41,8 @@ public class FileCleanupScheduler {
                 s.filter(Files::isDirectory).forEach(d -> {
                     try {
                         if (Files.getLastModifiedTime(d).toMillis() < cutoff) {
+                            // Don't delete output dirs for tasks still in flight (PENDING/PROCESSING).
+                            if ("outputs".equals(sub) && isInflightTask(d.getFileName().toString())) return;
                             fileService.deleteRecursively(d);
                         }
                     } catch (IOException ignored) {
@@ -49,5 +53,19 @@ public class FileCleanupScheduler {
             }
         }
         taskRepo.deleteByCreatedAtBefore(cutoff);
+    }
+
+    /** True if the task is still PENDING/PROCESSING (should not be cleaned up). */
+    private boolean isInflightTask(String taskId) {
+        try {
+            return taskRepo.findById(taskId)
+                .map(t -> {
+                    String s = t.getStatus();
+                    return TaskStatus.PENDING.name().equals(s) || TaskStatus.PROCESSING.name().equals(s);
+                })
+                .orElse(false);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

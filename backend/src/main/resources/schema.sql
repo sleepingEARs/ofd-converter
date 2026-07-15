@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS task (
   warning TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_task_created ON task(created_at);
+CREATE INDEX IF NOT EXISTS idx_task_status ON task(status);
+CREATE INDEX IF NOT EXISTS idx_task_source_filename ON task(source_filename);
 
 CREATE TABLE IF NOT EXISTS operation_log (
   id TEXT PRIMARY KEY,
@@ -33,3 +35,6 @@ CREATE TABLE IF NOT EXISTS operation_log (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_log_created ON operation_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_log_task_id ON operation_log(task_id);
+CREATE INDEX IF NOT EXISTS idx_log_status ON operation_log(status);
+CREATE INDEX IF NOT EXISTS idx_log_client_ip ON operation_log(client_ip);

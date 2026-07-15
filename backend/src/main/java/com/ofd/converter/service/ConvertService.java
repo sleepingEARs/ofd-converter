@@ -72,13 +72,13 @@ public class ConvertService {
         try {
             fileService.storeUpload(file.getInputStream(), fileId, safeName);
         } catch (Exception e) {
-            throw new ApiException(ErrorCode.INTERNAL_ERROR, "存储失败", 500);
+            throw new ApiException(ErrorCode.INTERNAL_ERROR, "存储失败", 500, e);
         }
         byte[] head;
         try (var is = Files.newInputStream(fileService.uploadFile(fileId))) {
             head = is.readNBytes(8);
         } catch (Exception e) {
-            throw new ApiException(ErrorCode.INVALID_REQUEST, "读取文件失败", 400);
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "读取文件失败", 400, e);
         }
         SourceType src = validation.detect(head, originalName);
         logService.record(OperationType.UPLOAD, ip, fileId, null, safeName, null, "SUCCESS", 0, null, ua);
@@ -93,14 +93,14 @@ public class ConvertService {
         try (var is = Files.newInputStream(source)) {
             head = is.readNBytes(8);
         } catch (Exception e) {
-            throw new ApiException(ErrorCode.INVALID_REQUEST, "源文件读取失败", 400);
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "源文件读取失败", 400, e);
         }
         SourceType src = validation.detect(head, filename);
         ConvertFormat fmt;
         try {
             fmt = ConvertFormat.valueOf(req.targetFormat().toUpperCase());
         } catch (Exception e) {
-            throw new ApiException(ErrorCode.INVALID_REQUEST, "目标格式不支持", 400);
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "目标格式不支持", 400, e);
         }
 
         String warning = warningFor(fmt);
